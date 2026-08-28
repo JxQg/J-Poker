@@ -64,8 +64,12 @@ export const AuditPanel = ({ roomId, roomCode, available, onBack, backLabel = 'è
       const anchor = document.createElement('a');
       anchor.href = href;
       anchor.download = `river-room-${roomCode}-audit.json`;
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
       anchor.click();
-      URL.revokeObjectURL(href);
+      anchor.remove();
+      // Keep the object URL alive until the browser has started the download.
+      window.setTimeout(() => URL.revokeObjectURL(href), 1_000);
       await verifyText(await blob.text());
     } catch (downloadError) {
       setStatus('invalid');

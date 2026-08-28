@@ -80,4 +80,18 @@ describe('poker table', () => {
     render(<PokerTable snapshot={waitingSnapshot} pending={false} onCommand={onCommand} />);
     expect(screen.getByRole('button', { name: '申请借款积分' })).toBeEnabled();
   });
+
+  it('does not expose an empty hero card region while waiting for the next hand', () => {
+    const waitingSnapshot = {
+      ...gameSnapshot,
+      phase: 'playing' as const,
+      handId: 'hand-2',
+      holeCards: [],
+      players: gameSnapshot.players.map((player, index) => (
+        index === 0 ? { ...player, status: 'waiting' as const } : player
+      )),
+    };
+    render(<PokerTable snapshot={waitingSnapshot} pending={false} onCommand={vi.fn()} />);
+    expect(screen.queryByLabelText('你的底牌')).not.toBeInTheDocument();
+  });
 });

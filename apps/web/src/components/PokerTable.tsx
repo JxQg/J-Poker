@@ -117,9 +117,11 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
 
         {hero && (
           <div className="hero-hand-zone" aria-label="你的手牌与积分">
-            <div className="hero-hole-cards" aria-label="你的底牌">
-              {snapshot.holeCards.map((card, index) => <PlayingCard card={card} key={`${card}-${index}`} />)}
-            </div>
+            {snapshot.holeCards.length > 0 && (
+              <div className="hero-hole-cards" aria-label="你的底牌">
+                {snapshot.holeCards.map((card, index) => <PlayingCard card={card} key={`${card}-${index}`} />)}
+              </div>
+            )}
             <div className="hero-identity">
               <span><UserRound size={14} /> {hero.nickname}</span>
               <small>座位 {hero.seat + 1}</small>

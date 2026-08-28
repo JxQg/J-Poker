@@ -1,6 +1,8 @@
-import { CircleDollarSign, LockKeyhole, Pause, Play, ShieldCheck, UserRound, WalletCards, XCircle } from 'lucide-react';
+import { CircleDollarSign, CheckCircle2, LockKeyhole, Pause, Play, ShieldCheck, UserRound, WalletCards, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useEffect, useState } from 'react';
 import type { GameSnapshot, RoomCommandType } from '../lib/protocol';
+import { betActionLabel } from '../lib/playerAction';
 import { tablePositionForSeat } from '../lib/tableLayout';
 import { PlayerSeat } from './PlayerSeat';
 import { PlayingCard } from './PlayingCard';
@@ -14,11 +16,13 @@ interface PokerTableProps {
 }
 
 export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) => {
+  const [expandedSeat, setExpandedSeat] = useState<number | null>(null);
   const hero = snapshot.players.find((player) => player.memberId === snapshot.heroMemberId);
   const isHost = hero?.isHost ?? false;
   const potTotal = snapshot.pots.reduce((sum, pot) => sum + pot.amount, 0)
     || snapshot.players.reduce((sum, player) => sum + player.streetBet, 0);
   const heroSeat = hero?.seat ?? 0;
+  const heroActionLabel = hero && hero.status !== 'folded' ? betActionLabel(hero.lastAction) : null;
   const opponents = snapshot.players.filter((player) => player.memberId !== snapshot.heroMemberId);
   const canRequestRebuy = Boolean(
     hero
@@ -31,6 +35,26 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
       || ['waiting', 'sitting_out', 'eliminated'].includes(hero.status)
     ),
   );
+  const canSettlementReady = Boolean(
+    snapshot.phase === 'settlement'
+    && hero
+    && !hero.settlementReady
+    && !hero.managed
+    && !hero.leavePending
+    && hero.status !== 'folded',
+  );
+
+  useEffect(() => {
+    if (expandedSeat !== null && !opponents.some((player) => player.seat === expandedSeat)) setExpandedSeat(null);
+  }, [expandedSeat, opponents]);
+
+  useEffect(() => {
+    const closeDetails = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpandedSeat(null);
+    };
+    window.addEventListener('keydown', closeDetails);
+    return () => window.removeEventListener('keydown', closeDetails);
+  }, []);
 
   return (
     <section className="table-stage" data-testid="poker-table" aria-label="德州扑克牌桌">
@@ -85,6 +109,8 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
             isActing={player.seat === snapshot.actingSeat}
             isButton={player.seat === snapshot.buttonSeat}
             showCards={snapshot.phase === 'playing' || snapshot.phase === 'settlement'}
+            expanded={expandedSeat === player.seat}
+            onToggleDetails={() => setExpandedSeat((seat) => seat === player.seat ? null : player.seat)}
           />
         ))}
 
@@ -122,10 +148,20 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
                 {snapshot.holeCards.map((card, index) => <PlayingCard card={card} key={`${card}-${index}`} />)}
               </div>
             )}
+            {heroActionLabel && hero && hero.streetBet > 0 && (
+              <span className={`hero-bet-action hero-bet-action--${heroActionLabel.toLowerCase()}`}>
+                <small>{heroActionLabel}</small>
+                <strong>{hero.streetBet.toLocaleString('zh-CN')}</strong>
+              </span>
+            )}
             <div className="hero-identity">
               <span><UserRound size={14} /> {hero.nickname}</span>
               <small>座位 {hero.seat + 1}</small>
               <strong><WalletCards size={14} /> {hero.stack.toLocaleString('zh-CN')}</strong>
+              <span className="hero-bet-detail">
+                本街 {hero.streetBet.toLocaleString('zh-CN')} · 累计 {hero.committed.toLocaleString('zh-CN')}
+              </span>
+              <span className={`hero-status status-${hero.status}`}>{hero.lastAction || hero.status}</span>
               {hero.seat === snapshot.buttonSeat && <span className="hero-dealer-button">D</span>}
             </div>
             {canRequestRebuy && (
@@ -157,6 +193,34 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
             </motion.div>
           )}
         </AnimatePresence>
+
+        <AnimatePresence>
+          {snapshot.settlement && (
+            <div className="settlement-positioner">
+              <motion.div className="settlement-strip" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
+                <span>本手结算</span>
+                <div>
+                  {snapshot.settlement.winners.map((winner) => (
+                    <strong key={`${winner.memberId}-${winner.amount}`}>
+                      {winner.nickname} +{winner.amount.toLocaleString('zh-CN')}
+                      {winner.handName && <small>{winner.handName}</small>}
+                    </strong>
+                  ))}
+                  {canSettlementReady && hero && (
+                    <button
+                      className={`settlement-ready-command ${hero.settlementReady ? 'ready' : ''}`}
+                      type="button"
+                      disabled={pending || hero.settlementReady}
+                      onClick={() => void onCommand('set_settlement_ready', { ready: true })}
+                    >
+                      <CheckCircle2 size={17} /> {hero.settlementReady ? '已准备下一手' : '准备下一手'}
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
 
       <aside className="table-side-rail" aria-label="牌桌信息">
@@ -164,21 +228,6 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
         <RoomLogPanel snapshot={snapshot} />
       </aside>
 
-      <AnimatePresence>
-        {snapshot.settlement && (
-          <motion.div className="settlement-strip" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <span>本手结算</span>
-            <div>
-              {snapshot.settlement.winners.map((winner) => (
-                <strong key={`${winner.memberId}-${winner.amount}`}>
-                  {winner.nickname} +{winner.amount.toLocaleString('zh-CN')}
-                  {winner.handName && <small>{winner.handName}</small>}
-                </strong>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </section>
   );
 };

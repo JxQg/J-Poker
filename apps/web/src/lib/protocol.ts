@@ -9,7 +9,7 @@ export type RoomPhase =
   | 'closed';
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'offline';
-export type PlayerStatus = 'waiting' | 'active' | 'folded' | 'all_in' | 'sitting_out' | 'eliminated';
+export type PlayerStatus = 'waiting' | 'active' | 'folded' | 'all_in' | 'sitting_out' | 'managed' | 'leaving' | 'eliminated';
 export type CardCode = `${string}${'c' | 'd' | 'h' | 's'}`;
 
 export interface RoomConfig {
@@ -41,6 +41,9 @@ export interface PlayerState {
   online: boolean;
   isHost: boolean;
   rebuyPending: boolean;
+  settlementReady: boolean;
+  managed: boolean;
+  leavePending: boolean;
   holeCards?: CardCode[];
   lastAction?: string;
 }
@@ -148,6 +151,8 @@ export type RoomCommandType =
   | 'remove_player'
   | 'close_room'
   | 'request_rebuy'
+  | 'set_settlement_ready'
+  | 'leave_room'
   | 'request_snapshot';
 
 export interface RoomCommand<TPayload extends Record<string, unknown> = Record<string, unknown>> {
@@ -249,6 +254,8 @@ const playerStatusAliases: Record<string, PlayerStatus> = {
   sitting_out: 'sitting_out',
   sit_out: 'sitting_out',
   eliminated: 'eliminated',
+  managed: 'managed',
+  leaving: 'leaving',
 };
 
 const normalizeConfig = (value: unknown): RoomConfig => {
@@ -284,6 +291,9 @@ const normalizePlayer = (value: unknown): PlayerState => {
     online: boolValue(source, ['online', 'connected', 'isOnline', 'is_online'], true),
     isHost: boolValue(source, ['isHost', 'is_host', 'host']),
     rebuyPending: boolValue(source, ['rebuyPending', 'rebuy_pending']),
+    settlementReady: boolValue(source, ['settlementReady', 'settlement_ready']),
+    managed: boolValue(source, ['managed']),
+    leavePending: boolValue(source, ['leavePending', 'leave_pending']),
     holeCards: normalizeCards(first(source, ['holeCards', 'hole_cards'])),
     lastAction: textValue(source, ['lastAction', 'last_action']) || undefined,
   };

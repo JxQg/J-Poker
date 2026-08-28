@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     cookie_max_age_seconds: int = 7 * 24 * 60 * 60
     socket_ticket_ttl_seconds: int = 30
     shuffle_timeout_seconds: int = 5
-    next_hand_delay_seconds: int = 3
+    next_hand_delay_seconds: int = 10
     host_transfer_seconds: int = 60
     empty_room_timeout_seconds: int = 15 * 60
     unstarted_room_timeout_seconds: int = 2 * 60 * 60

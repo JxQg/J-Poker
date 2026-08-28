@@ -51,11 +51,14 @@ export default function App() {
     }
   }, [controller, setNotice]);
 
-  const leaveRoom = useCallback(() => {
+  const leaveRoom = useCallback(async () => {
+    if (snapshot) {
+      await dispatchCommand('leave_room');
+    }
     clearSession();
     window.history.replaceState({}, '', '/');
     setRoute({ audit: false });
-  }, [clearSession]);
+  }, [clearSession, dispatchCommand, snapshot]);
 
   const openAudit = useCallback(() => {
     if (!session) return;
@@ -91,7 +94,7 @@ export default function App() {
           connectionStatus={connectionStatus}
           auditAvailable={auditAvailable}
           onAudit={openAudit}
-          onLeave={leaveRoom}
+          onLeave={() => { void leaveRoom(); }}
         />
         <AuditPanel
           roomId={session.roomId}
@@ -112,7 +115,7 @@ export default function App() {
         connectionStatus={connectionStatus}
         auditAvailable={auditAvailable}
         onAudit={openAudit}
-        onLeave={leaveRoom}
+        onLeave={() => { void leaveRoom(); }}
       />
       {!snapshot ? (
         <main className="room-loading">

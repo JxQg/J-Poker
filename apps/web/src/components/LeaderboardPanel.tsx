@@ -24,7 +24,7 @@ export const LeaderboardPanel = ({ snapshot }: LeaderboardPanelProps) => {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <span><Trophy size={16} /> 积分榜</span>
+        <span><Trophy size={20} /><span className="panel-heading-label">积分榜</span></span>
         <small>筹码 - 借款</small>
         <ChevronDown size={16} aria-hidden="true" />
       </button>

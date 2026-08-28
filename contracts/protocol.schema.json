@@ -969,6 +969,66 @@
       "title": "JoinRoomRequest",
       "type": "object"
     },
+    "LeaveRoomCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "leave_room",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "LeaveRoomCommand",
+      "type": "object"
+    },
     "LegalActions": {
       "additionalProperties": false,
       "properties": {
@@ -1265,7 +1325,9 @@
         "active",
         "folded",
         "all_in",
-        "sitting_out"
+        "sitting_out",
+        "managed",
+        "leaving"
       ],
       "title": "PlayerStatus",
       "type": "string"
@@ -1330,6 +1392,21 @@
         "rebuyPending": {
           "default": false,
           "title": "Rebuypending",
+          "type": "boolean"
+        },
+        "settlementReady": {
+          "default": false,
+          "title": "Settlementready",
+          "type": "boolean"
+        },
+        "managed": {
+          "default": false,
+          "title": "Managed",
+          "type": "boolean"
+        },
+        "leavePending": {
+          "default": false,
+          "title": "Leavepending",
           "type": "boolean"
         },
         "lastAction": {
@@ -1866,6 +1943,12 @@
         },
         {
           "$ref": "#/$defs/RequestRebuyCommand"
+        },
+        {
+          "$ref": "#/$defs/SettlementReadyCommand"
+        },
+        {
+          "$ref": "#/$defs/LeaveRoomCommand"
         }
       ]
     },
@@ -2244,6 +2327,66 @@
         "amount"
       ],
       "title": "SettlementAward",
+      "type": "object"
+    },
+    "SettlementReadyCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "set_settlement_ready",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ReadyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "SettlementReadyCommand",
       "type": "object"
     },
     "SettlementView": {
@@ -2740,6 +2883,7 @@
               "close_room": "#/$defs/RoomCommandUnion",
               "contribute_randomness": "#/$defs/RoomCommandUnion",
               "fold": "#/$defs/RoomCommandUnion",
+              "leave_room": "#/$defs/RoomCommandUnion",
               "pause": "#/$defs/RoomCommandUnion",
               "pause_room": "#/$defs/RoomCommandUnion",
               "player_action": "#/$defs/RoomCommandUnion",
@@ -2750,6 +2894,7 @@
               "request_snapshot": "#/$defs/RoomCommandUnion",
               "resume_room": "#/$defs/RoomCommandUnion",
               "set_ready": "#/$defs/RoomCommandUnion",
+              "set_settlement_ready": "#/$defs/RoomCommandUnion",
               "shuffle.contribute": "#/$defs/RoomCommandUnion",
               "sitOut": "#/$defs/RoomCommandUnion",
               "start": "#/$defs/RoomCommandUnion",

@@ -1,4 +1,4 @@
-import { CircleDollarSign, Crown, Play, Save, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
+import { CircleDollarSign, Crown, Play, ShieldCheck, Trash2, UserRound, Users } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useMemo, useState } from 'react';
 import type { GameSnapshot, RoomConfig, RoomCommandType } from '../lib/protocol';
@@ -17,8 +17,19 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
 
   useEffect(() => setConfig(snapshot.config), [snapshot.config]);
 
-  const readyPlayers = useMemo(() => snapshot.players.filter((player) => player.ready), [snapshot.players]);
-  const canStart = isHost && readyPlayers.length >= 2 && !pending;
+  const readyGuests = useMemo(
+    () => snapshot.players.filter((player) => !player.isHost && player.ready && player.online),
+    [snapshot.players],
+  );
+  const canStart = Boolean(
+    isHost
+    && hero?.online
+    && hero.stack > snapshot.config.bigBlind
+    && hero.status !== 'sitting_out'
+    && !hero.leavePending
+    && readyGuests.length >= 1
+    && !pending,
+  );
   const canRequestRebuy = Boolean(
     hero
     && hero.stack <= snapshot.config.bigBlind
@@ -26,21 +37,19 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
     && snapshot.handId === null,
   );
 
-  const patchConfig = <TKey extends keyof RoomConfig>(key: TKey, value: RoomConfig[TKey]) => {
-    setConfig((current) => ({ ...current, [key]: value }));
-  };
-
-  const saveConfig = async () => {
-    if (config.bigBlind <= config.smallBlind) {
+  const applyConfig = <TKey extends keyof RoomConfig>(key: TKey, value: RoomConfig[TKey]) => {
+    const next = { ...config, [key]: value };
+    setConfig(next);
+    if (next.bigBlind <= next.smallBlind) {
       setConfigError('大盲必须高于小盲');
       return;
     }
-    if (config.initialStack < config.bigBlind * 20 || config.initialStack > config.bigBlind * 500) {
+    if (next.initialStack < next.bigBlind * 20 || next.initialStack > next.bigBlind * 500) {
       setConfigError('初始筹码需为 20-500 个大盲');
       return;
     }
     setConfigError(null);
-    await onCommand('update_config', { config });
+    void onCommand('update_config', { config: next }).catch(() => setConfig(snapshot.config));
   };
 
   return (
@@ -77,7 +86,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
                 <div className="player-line">
                   <strong data-testid={player ? 'player-name' : undefined}>{player?.nickname ?? '空座位'}</strong>
                   {player && (
-                    <span>{player.ready ? '已准备' : player.online ? '未准备' : '已离线'}</span>
+                    <span>{player.isHost ? '房主' : player.ready ? '已准备' : player.online ? '未准备' : '已离线'}</span>
                   )}
                 </div>
                 {player?.isHost && <Crown className="host-crown" size={17} aria-label="房主" />}
@@ -92,23 +101,25 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
                     <Trash2 size={16} />
                   </button>
                 )}
-                {player && <span className={`ready-light ${player.ready ? 'on' : ''}`} aria-hidden="true" />}
+                {player && !player.isHost && <span className={`ready-light ${player.ready ? 'on' : ''}`} aria-hidden="true" />}
               </motion.div>
             );
           })}
         </div>
 
         <div className="lobby-primary-actions">
-          <button
-            className={hero?.ready ? 'secondary-command ready-active' : 'secondary-command'}
-            data-testid="ready-toggle"
-            type="button"
-            disabled={pending || !hero}
-            onClick={() => void onCommand('set_ready', { ready: !hero?.ready })}
-          >
-            <ShieldCheck size={19} />
-            {hero?.ready ? '取消准备' : '准备'}
-          </button>
+          {!isHost && (
+            <button
+              className={hero?.ready ? 'secondary-command ready-active' : 'secondary-command'}
+              data-testid="ready-toggle"
+              type="button"
+              disabled={pending || !hero}
+              onClick={() => void onCommand('set_ready', { ready: !hero?.ready })}
+            >
+              <ShieldCheck size={19} />
+              {hero?.ready ? '取消准备' : '准备'}
+            </button>
+          )}
           {isHost && (
             <button
               className="primary-command"
@@ -132,7 +143,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
             <CircleDollarSign size={17} /> 申请借款积分
           </button>
         )}
-        {isHost && readyPlayers.length < 2 && <p className="quiet-status">至少 2 名玩家准备后可以开局</p>}
+        {isHost && readyGuests.length < 1 && <p className="quiet-status">至少 1 名其他玩家准备后可以开局</p>}
       </section>
 
       <aside className="room-settings" aria-labelledby="settings-title">
@@ -149,7 +160,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
           <select
             id="max-players"
             value={config.maxPlayers}
-            onChange={(event) => patchConfig('maxPlayers', Number(event.target.value))}
+            onChange={(event) => applyConfig('maxPlayers', Number(event.target.value))}
           >
             {Array.from({ length: 9 }, (_, index) => index + 2).map((value) => (
               <option value={value} key={value}>{value} 人</option>
@@ -165,7 +176,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
                 min={1}
                 max={5_000}
                 value={config.smallBlind}
-                onChange={(event) => patchConfig('smallBlind', Math.max(1, Number(event.target.value)))}
+                onChange={(event) => applyConfig('smallBlind', Math.max(1, Number(event.target.value)))}
               />
             </div>
             <div>
@@ -176,7 +187,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
                 min={2}
                 max={10_000}
                 value={config.bigBlind}
-                onChange={(event) => patchConfig('bigBlind', Math.max(2, Number(event.target.value)))}
+                onChange={(event) => applyConfig('bigBlind', Math.max(2, Number(event.target.value)))}
               />
             </div>
           </div>
@@ -189,7 +200,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
             max={config.bigBlind * 500}
             step={config.bigBlind}
             value={config.initialStack}
-            onChange={(event) => patchConfig('initialStack', Math.max(1, Number(event.target.value)))}
+            onChange={(event) => applyConfig('initialStack', Math.max(1, Number(event.target.value)))}
           />
           <span className="field-suffix">{Math.round(config.initialStack / config.bigBlind)} BB</span>
 
@@ -200,7 +211,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
                 type="button"
                 className={config.actionTimeoutSeconds === value ? 'active' : ''}
                 key={value}
-                onClick={() => patchConfig('actionTimeoutSeconds', value)}
+                onClick={() => applyConfig('actionTimeoutSeconds', value)}
               >
                 {value}s
               </button>
@@ -209,11 +220,7 @@ export const Lobby = ({ snapshot, pending, onCommand }: LobbyProps) => {
         </fieldset>
 
         {configError && <p className="form-error compact" role="alert">{configError}</p>}
-        {isHost ? (
-          <button className="settings-save" type="button" disabled={pending} onClick={() => void saveConfig()}>
-            <Save size={17} /> 保存设置
-          </button>
-        ) : (
+        {!isHost && (
           <p className="quiet-status">设置由房主管理，首手开始后锁定</p>
         )}
 

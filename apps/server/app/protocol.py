@@ -39,6 +39,8 @@ class PlayerStatus(StrEnum):
     FOLDED = "folded"
     ALL_IN = "all_in"
     SITTING_OUT = "sitting_out"
+    MANAGED = "managed"
+    LEAVING = "leaving"
 
 
 class Street(StrEnum):
@@ -275,6 +277,16 @@ class RequestRebuyCommand(CommandBase):
     payload: EmptyPayload = Field(default_factory=EmptyPayload)
 
 
+class SettlementReadyCommand(CommandBase):
+    type: Literal["set_settlement_ready"]
+    payload: ReadyPayload = Field(default_factory=ReadyPayload)
+
+
+class LeaveRoomCommand(CommandBase):
+    type: Literal["leave_room"]
+    payload: EmptyPayload = Field(default_factory=EmptyPayload)
+
+
 type RoomCommandUnion = (
     ReadyCommand
     | StartCommand
@@ -297,6 +309,8 @@ type RoomCommandUnion = (
     | RemovePlayerCommand
     | RequestSnapshotCommand
     | RequestRebuyCommand
+    | SettlementReadyCommand
+    | LeaveRoomCommand
 )
 type RoomCommand = Annotated[RoomCommandUnion, Field(discriminator="type")]
 
@@ -341,6 +355,9 @@ class PlayerView(ProtocolModel):
     online: bool
     is_host: bool
     rebuy_pending: bool = False
+    settlement_ready: bool = False
+    managed: bool = False
+    leave_pending: bool = False
     last_action: str | None = None
     hole_cards: list[CardView] | None = None
 

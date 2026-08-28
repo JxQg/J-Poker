@@ -39,7 +39,9 @@ export type RoomCommandUnion =
   | UpdateConfigCommand
   | RemovePlayerCommand
   | RequestSnapshotCommand
-  | RequestRebuyCommand;
+  | RequestRebuyCommand
+  | SettlementReadyCommand
+  | LeaveRoomCommand;
 export type Commandid = string;
 export type Roomid1 = string;
 export type Handid = string | null;
@@ -175,12 +177,24 @@ export type Handid20 = string | null;
 export type Turnid20 = string | null;
 export type Expectedversion20 = number;
 export type Type20 = "request_rebuy";
+export type Commandid21 = string;
+export type Roomid22 = string;
+export type Handid21 = string | null;
+export type Turnid21 = string | null;
+export type Expectedversion21 = number;
+export type Type21 = "set_settlement_ready";
+export type Commandid22 = string;
+export type Roomid23 = string;
+export type Handid22 = string | null;
+export type Turnid22 = string | null;
+export type Expectedversion22 = number;
+export type Type22 = "leave_room";
 export type CommandAck = CommandAccepted | CommandRejected;
 export type Status = "accepted";
-export type Commandid21 = string;
+export type Commandid23 = string;
 export type Appliedversion = number;
 export type Status1 = "rejected";
-export type Commandid22 = string;
+export type Commandid24 = string;
 export type Appliedversion1 = number;
 export type ErrorCode =
   | "AUTH_REQUIRED"
@@ -203,7 +217,7 @@ export type ErrorCode =
 export type Message = string;
 export type Protocolversion = "1.0";
 export type Rulesversion = "pokerkit-0.7.5/nlhe-v1";
-export type Roomid22 = string;
+export type Roomid24 = string;
 export type Roomcode1 = string;
 export type Version = number;
 export type RoomPhase = "lobby" | "collecting_entropy" | "playing" | "settlement" | "paused" | "closed";
@@ -218,11 +232,14 @@ export type Borrowedtotal = number;
 export type Rankingscore = number;
 export type Streetbet = number;
 export type Committed = number;
-export type PlayerStatus = "waiting" | "active" | "folded" | "all_in" | "sitting_out";
+export type PlayerStatus = "waiting" | "active" | "folded" | "all_in" | "sitting_out" | "managed" | "leaving";
 export type Ready1 = boolean;
 export type Online = boolean;
 export type Ishost1 = boolean;
 export type Rebuypending = boolean;
+export type Settlementready = boolean;
+export type Managed = boolean;
+export type Leavepending = boolean;
 export type Lastaction = string | null;
 export type Holecards = CardView[] | null;
 export type Code = string;
@@ -230,7 +247,7 @@ export type Deckindex = number;
 export type Salt = string;
 export type Proof = string[];
 export type Players = PlayerView[];
-export type Handid21 = string;
+export type Handid23 = string;
 export type Handnumber = number;
 export type Buttonseat = number;
 export type Street = "preflop" | "flop" | "turn" | "river" | "complete";
@@ -242,7 +259,7 @@ export type Pots = PotView[];
 export type Currentbet = number;
 export type Actormemberid = string | null;
 export type Actorseat = number | null;
-export type Turnid21 = string;
+export type Turnid23 = string;
 export type Deadlineat = string | null;
 export type Canfold = boolean;
 export type Cancheck = boolean;
@@ -257,12 +274,12 @@ export type Amount3 = number;
 export type Handname = string | null;
 export type Awards = SettlementAward[];
 export type Id = string;
-export type Type21 = string;
+export type Type23 = string;
 export type Message1 = string;
 export type Createdat = string;
-export type Handid22 = string | null;
+export type Handid24 = string | null;
 export type Roomlogs = RoomLogEntry[];
-export type Handid23 = string;
+export type Handid25 = string;
 export type Handnumber1 = number;
 export type Completedat = string;
 export type Board1 = CardView[];
@@ -284,25 +301,25 @@ export type Contributionrequired = boolean;
 export type Auditavailable = boolean;
 export type Servernow = string;
 export type Closepending = boolean;
-export type Roomid23 = string;
+export type Roomid25 = string;
 export type Version1 = number;
-export type Type22 = string;
+export type Type24 = string;
 export type Createdat1 = string;
 export type Message2 = string;
-export type Commandid23 = string | null;
+export type Commandid25 = string | null;
 export type Schemaversion = "1.0";
 export type Rulesversion1 = "pokerkit-0.7.5/nlhe-v1";
-export type Roomid24 = string;
+export type Roomid26 = string;
 export type Roomcode2 = string;
 export type Closedat = string;
 export type Finaleventhash = string;
 export type Version2 = number;
-export type Type23 = string;
+export type Type25 = string;
 export type Createdat2 = string;
 export type Previoushash = string;
 export type Hash = string;
 export type Events = AuditEvent[];
-export type Handid24 = string;
+export type Handid26 = string;
 export type Handnumber2 = number;
 export type Serverseed = string;
 export type Servercommitment1 = string;
@@ -565,14 +582,32 @@ export interface RequestRebuyCommand {
   type: Type20;
   payload?: EmptyPayload;
 }
+export interface SettlementReadyCommand {
+  commandId: Commandid21;
+  roomId: Roomid22;
+  handId?: Handid21;
+  turnId?: Turnid21;
+  expectedVersion: Expectedversion21;
+  type: Type21;
+  payload?: ReadyPayload;
+}
+export interface LeaveRoomCommand {
+  commandId: Commandid22;
+  roomId: Roomid23;
+  handId?: Handid22;
+  turnId?: Turnid22;
+  expectedVersion: Expectedversion22;
+  type: Type22;
+  payload?: EmptyPayload;
+}
 export interface CommandAccepted {
   status?: Status;
-  commandId: Commandid21;
+  commandId: Commandid23;
   appliedVersion: Appliedversion;
 }
 export interface CommandRejected {
   status?: Status1;
-  commandId: Commandid22;
+  commandId: Commandid24;
   appliedVersion: Appliedversion1;
   errorCode: ErrorCode;
   message: Message;
@@ -580,7 +615,7 @@ export interface CommandRejected {
 export interface RoomSnapshot {
   protocolVersion?: Protocolversion;
   rulesVersion?: Rulesversion;
-  roomId: Roomid22;
+  roomId: Roomid24;
   roomCode: Roomcode1;
   version: Version;
   phase: RoomPhase;
@@ -613,6 +648,9 @@ export interface PlayerView {
   online: Online;
   isHost: Ishost1;
   rebuyPending?: Rebuypending;
+  settlementReady?: Settlementready;
+  managed?: Managed;
+  leavePending?: Leavepending;
   lastAction?: Lastaction;
   holeCards?: Holecards;
 }
@@ -623,7 +661,7 @@ export interface CardView {
   proof: Proof;
 }
 export interface HandView {
-  handId: Handid21;
+  handId: Handid23;
   handNumber: Handnumber;
   buttonSeat: Buttonseat;
   street: Street;
@@ -633,7 +671,7 @@ export interface HandView {
   currentBet: Currentbet;
   actorMemberId?: Actormemberid;
   actorSeat?: Actorseat;
-  turnId: Turnid21;
+  turnId: Turnid23;
   deadlineAt?: Deadlineat;
   legalActions?: LegalActions;
   settlement?: SettlementView | null;
@@ -662,13 +700,13 @@ export interface SettlementAward {
 }
 export interface RoomLogEntry {
   id: Id;
-  type: Type21;
+  type: Type23;
   message: Message1;
   createdAt: Createdat;
-  handId?: Handid22;
+  handId?: Handid24;
 }
 export interface CompletedHand {
-  handId: Handid23;
+  handId: Handid25;
   handNumber: Handnumber1;
   completedAt: Completedat;
   board: Board1;
@@ -693,9 +731,9 @@ export interface FairnessView {
   auditAvailable?: Auditavailable;
 }
 export interface RoomEventMessage {
-  roomId: Roomid23;
+  roomId: Roomid25;
   version: Version1;
-  type: Type22;
+  type: Type24;
   payload: Payload;
   createdAt: Createdat1;
 }
@@ -705,12 +743,12 @@ export interface Payload {
 export interface RoomErrorMessage {
   errorCode: ErrorCode;
   message: Message2;
-  commandId?: Commandid23;
+  commandId?: Commandid25;
 }
 export interface AuditPackage {
   schemaVersion?: Schemaversion;
   rulesVersion?: Rulesversion1;
-  roomId: Roomid24;
+  roomId: Roomid26;
   roomCode: Roomcode2;
   closedAt: Closedat;
   finalEventHash: Finaleventhash;
@@ -722,7 +760,7 @@ export interface AuditPackage {
 }
 export interface AuditEvent {
   version: Version2;
-  type: Type23;
+  type: Type25;
   payload: Payload1;
   createdAt: Createdat2;
   previousHash: Previoushash;
@@ -732,7 +770,7 @@ export interface Payload1 {
   [k: string]: unknown;
 }
 export interface AuditHand {
-  handId: Handid24;
+  handId: Handid26;
   handNumber: Handnumber2;
   serverSeed: Serverseed;
   serverCommitment: Servercommitment1;

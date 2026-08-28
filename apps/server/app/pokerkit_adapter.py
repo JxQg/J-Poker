@@ -296,8 +296,10 @@ class PokerKitAdapter:
 
     def hand_name(self, member_id: str) -> str:
         """Returns the best made hand once enough board cards are available."""
-        if len(self._board_indices) < 3:
+        if self.folded(member_id):
             return "未摊牌"
+        if len(self._board_indices) < 3:
+            return "Uncontested"
         index = self._member_indices[member_id]
         return str(self.state.get_hand(index, 0, 0)).split(" (", 1)[0]
 

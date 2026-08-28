@@ -24,5 +24,6 @@ export const tablePositionForSeat = (
   const layout = orbitLayouts[maxPlayers] ?? orbitLayouts[8]!;
   const relativeSeat = (seat - heroSeat + maxPlayers) % maxPlayers;
   const [x, y] = layout[relativeSeat] ?? layout[0]!;
-  return { x, y, relativeSeat };
+  // Keep top-seat cards within the playing surface at every supported table size.
+  return { x, y: Math.max(y, 16), relativeSeat };
 };

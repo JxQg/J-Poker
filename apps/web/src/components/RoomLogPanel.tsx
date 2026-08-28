@@ -29,7 +29,7 @@ const HandResult = ({ hand }: { hand: CompletedHand }) => (
           </div>
           <div className="log-player-cards">
             {player.holeCards.map((card, index) => <PlayingCard card={card} compact key={`${card}-${index}`} />)}
-            <small>{player.handName}</small>
+            {!player.folded && <small>{player.handName || 'Uncontested'}</small>}
           </div>
         </div>
       ))}
@@ -55,7 +55,7 @@ export const RoomLogPanel = ({ snapshot }: RoomLogPanelProps) => {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
-        <span><ClipboardList size={16} /> 房间日志</span>
+        <span><ClipboardList size={20} /><span className="panel-heading-label">房间日志</span></span>
         <small>{snapshot.roomLogs.length}</small>
         <ChevronDown size={16} aria-hidden="true" />
       </button>

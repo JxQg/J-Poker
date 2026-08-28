@@ -58,6 +58,6 @@ docker compose --env-file .env -f infra/compose.yaml ps
 
 PostgreSQL 由服务器现有实例负责备份、恢复、账号与网络策略。本项目 Compose 不会创建数据库、执行 `pg_dump`，也不会覆盖已有数据库。
 
-当前单实例不接入 Redis：房间 Actor、Socket.IO 广播和限流均在同一个应用进程中。即使服务器已有 Redis，也不要配置 `REDIS_URL`，因为当前版本不会读取它。扩展到多应用容器时，Redis 才会与 Socket.IO 消息管理、房间归属、分布式限流和互斥一起接入。
+当前单实例不接入 Redis：房间 Actor、Socket.IO 广播和限流均在同一个应用进程中。即使服务器已有 Redis，也不要配置 `REDIS_URL`，因为当前版本不会读取它。后续扩展到多应用容器时，Redis 可作为 Socket.IO 跨实例消息管理、短期限流/票据撤销黑名单、房间租约和指标缓存；不得把 Redis 当作牌局权威状态源，且必须与跨实例房间归属及互斥一起发布。
 
 Redis 版本对当前发布没有要求；将来多实例接入时，使用受支持的稳定 Redis 版本并隔离逻辑数据库、账号和 ACL 即可。

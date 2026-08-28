@@ -74,19 +74,20 @@ async def test_room_flow_idempotency_private_projection_recovery_and_audit(tmp_p
         await actor.set_connection(host_id, True)
         await actor.set_connection(guest_id, True)
 
-        for index, member_id in enumerate((host_id, guest_id), start=1):
-            command = _command(
-                actor.room.version,
-                room_id,
-                f"ready-{index:04d}",
-                "ready",
-                payload={"ready": True},
-            )
-            assert (await actor.command(member_id, command))["status"] == "accepted"
+        command = _command(
+            actor.room.version,
+            room_id,
+            "ready-guest-0001",
+            "ready",
+            payload={"ready": True},
+        )
+        assert (await actor.command(guest_id, command))["status"] == "accepted"
 
         start = _command(actor.room.version, room_id, "start-0001", "start")
         assert (await actor.command(host_id, start))["status"] == "accepted"
         hand = actor.room.data["hand"]
+        assert actor.room.data["players"][host_id]["ready"] is True
+        assert host_id in hand["memberOrder"]
         common_version = actor.room.version
         contribution_ids = {}
         for index, member_id in enumerate(hand["requiredMemberIds"]):

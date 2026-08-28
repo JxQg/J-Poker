@@ -67,6 +67,11 @@ class RoomGame:
         self.member_deletes: list[str] = []
         self.dirty_audit_hand_id: str | None = None
         self.adapter: PokerKitAdapter | None = None
+        # Older snapshots predate these state fields.
+        for player in self.data.get("players", {}).values():
+            player.setdefault("managed", False)
+            player.setdefault("leavePending", False)
+            player.setdefault("settlementReady", False)
         self._restore_adapter()
 
     @classmethod
@@ -100,6 +105,9 @@ class RoomGame:
                     "sittingOut": False,
                     "sitOutNext": False,
                     "rebuyPending": False,
+                    "managed": False,
+                    "leavePending": False,
+                    "settlementReady": False,
                     "borrowedTotal": 0,
                     "eligibleHand": 1,
                     "joinedAt": _iso(now),
@@ -148,6 +156,12 @@ class RoomGame:
         if material is None or not material.get("deck"):
             raise ValueError(f"encrypted audit material is missing for hand {hand['id']}")
         config = self.data["config"]
+        if len(hand.get("memberOrder", [])) < 2 or any(
+            int(stack) <= int(config["bigBlind"]) for stack in hand.get("startingStacks", [])
+        ):
+            self.data["phase"] = "lobby"
+            self.data["hand"] = None
+            return
         self.adapter = PokerKitAdapter(
             hand["memberOrder"],
             hand["startingStacks"],
@@ -263,6 +277,9 @@ class RoomGame:
             "sittingOut": False,
             "sitOutNext": False,
             "rebuyPending": False,
+            "managed": False,
+            "leavePending": False,
+            "settlementReady": False,
             "borrowedTotal": 0,
             "eligibleHand": eligible_hand,
             "joinedAt": _iso(now),
@@ -303,7 +320,7 @@ class RoomGame:
             self._set_ready(member_id, bool(payload.get("ready", True)), now)
         elif command_type == "start":
             self._require_host(member_id)
-            self._start(now)
+            self._start(member_id, now)
         elif command_type == "pause":
             self._require_host(member_id)
             self._set_paused(bool(payload.get("paused", True)), now)
@@ -314,6 +331,10 @@ class RoomGame:
             self._sit_out(member_id, bool(payload.get("sittingOut", True)), now)
         elif command_type == "request_rebuy":
             self._request_rebuy(member_id, now)
+        elif command_type == "set_settlement_ready":
+            self._set_settlement_ready(member_id, bool(payload.get("ready", True)), now)
+        elif command_type == "leave_room":
+            self._leave_room(member_id, now)
         elif command_type == "shuffle.contribute":
             self._contribute(member_id, command_value.hand_id, command_value.turn_id, payload, now)
         elif command_type in {"fold", "check", "call", "raiseTo"}:
@@ -392,9 +413,20 @@ class RoomGame:
             player["stack"] = config.initial_stack
         self._emit("RoomConfigUpdated", {"config": self.data["config"]}, now)
 
-    def _start(self, now: datetime) -> None:
+    def _start(self, host_id: str, now: datetime) -> None:
         if self.data["phase"] != "lobby":
             raise DomainError(ErrorCode.INVALID_PHASE, "the room is not ready to start")
+        host = self._player(host_id)
+        big_blind = self.data["config"]["bigBlind"]
+        if (
+            not host["online"]
+            or host["stack"] <= big_blind
+            or host["sittingOut"]
+            or host.get("leavePending", False)
+        ):
+            raise DomainError(ErrorCode.INVALID_PHASE, "the host must join the hand to start")
+        # Starting a game is the host's commitment to join the hand.
+        host["ready"] = True
         self._begin_shuffle(now)
 
     def _eligible_players(self, hand_number: int) -> list[dict[str, Any]]:
@@ -406,6 +438,7 @@ class RoomGame:
             and player["online"]
             and player["stack"] > big_blind
             and not player["sittingOut"]
+            and not player.get("leavePending", False)
             and player["eligibleHand"] <= hand_number
         ]
 
@@ -551,7 +584,7 @@ class RoomGame:
             for member_id in hand["memberOrder"]
             if self._player(member_id)["stack"] <= big_blind
         ]
-        if invalid_members:
+        if invalid_members or len(hand["memberOrder"]) < 2:
             self.data["phase"] = "lobby"
             self.data["hand"] = None
             self.adapter = None
@@ -604,6 +637,8 @@ class RoomGame:
             result.deck,
         )
         self.data["phase"] = "playing"
+        for member_id in hand["memberOrder"]:
+            self._player(member_id)["settlementReady"] = False
         self._advance_turn(now)
         self.dirty_audit_hand_id = hand["id"]
         self._emit(
@@ -625,6 +660,9 @@ class RoomGame:
             hand["deadlineAt"] = _iso(
                 now + timedelta(seconds=self.data["config"]["actionTimeoutSeconds"])
             )
+            actor_id = self.adapter.actor_member_id
+            if actor_id is not None and self._player(actor_id).get("leavePending", False):
+                self._action_timeout(now)
         else:
             hand["deadlineAt"] = None
 
@@ -640,6 +678,8 @@ class RoomGame:
         if self.data["phase"] != "playing" or self.adapter is None:
             raise DomainError(ErrorCode.INVALID_PHASE, "there is no active betting round")
         hand = self._validate_hand_turn(hand_id, turn_id)
+        if self._player(member_id).get("leavePending", False):
+            raise DomainError(ErrorCode.INVALID_COMMAND, "leaving players cannot act")
         if self.adapter.actor_member_id != member_id:
             raise DomainError(ErrorCode.NOT_YOUR_TURN, "another player must act")
         try:
@@ -802,15 +842,93 @@ class RoomGame:
             if len(self._eligible_players(next_hand)) >= 2:
                 self._begin_shuffle(now)
 
+    def _set_settlement_ready(self, member_id: str, ready: bool, now: datetime) -> None:
+        if (
+            self.data["phase"] != "settlement"
+            or self.data.get("hand") is None
+            or self.adapter is None
+        ):
+            raise DomainError(
+                ErrorCode.INVALID_PHASE, "settlement readiness is only available after a hand"
+            )
+        player = self._player(member_id)
+        if member_id not in self.adapter.member_order or self.adapter.folded(member_id):
+            raise DomainError(
+                ErrorCode.INVALID_COMMAND, "folded or non-participating players cannot ready"
+            )
+        if player.get("leavePending", False):
+            raise DomainError(ErrorCode.INVALID_COMMAND, "leaving players cannot ready")
+        player["settlementReady"] = ready
+        self._emit("SettlementReadyChanged", {"memberId": member_id, "ready": ready}, now)
+        if self._settlement_quorum_reached():
+            self._next_hand(now)
+
+    def _settlement_quorum_reached(self) -> bool:
+        if self.adapter is None:
+            return False
+        participants = [self._player(member_id) for member_id in self.adapter.member_order]
+        required = [
+            player
+            for player in participants
+            if not self.adapter.folded(player["id"])
+            and player["online"]
+            and not player.get("managed", False)
+            and not player.get("leavePending", False)
+        ]
+        return bool(required) and all(player.get("settlementReady", False) for player in required)
+
+    def _leave_room(self, member_id: str, now: datetime) -> None:
+        player = self._player(member_id)
+        phase = self.data["phase"]
+        hand = self.data.get("hand")
+        in_hand = hand is not None and member_id in hand.get("memberOrder", [])
+        if phase in {"playing", "collecting_entropy"} and in_hand:
+            assert hand is not None
+            if player.get("leavePending", False):
+                raise DomainError(ErrorCode.INVALID_COMMAND, "leave already requested")
+            player["leavePending"] = True
+            player["settlementReady"] = False
+            player["ready"] = False
+            self._emit("PlayerLeaveRequested", {"memberId": member_id, "handId": hand["id"]}, now)
+            if (
+                phase == "playing"
+                and self.adapter is not None
+                and self.adapter.actor_member_id == member_id
+            ):
+                self._action_timeout(now)
+            return
+        self._remove_member(member_id, now)
+
+    def _remove_member(self, member_id: str, now: datetime) -> None:
+        player = self._player(member_id)
+        del self.data["players"][member_id]
+        self.member_deletes.append(member_id)
+        if self.data["hostMemberId"] == member_id:
+            replacement = next(
+                (
+                    candidate
+                    for candidate in sorted(
+                        self.data["players"].values(),
+                        key=lambda item: (not item["online"], item["joinedAt"]),
+                    )
+                ),
+                None,
+            )
+            if replacement is not None:
+                self.data["hostMemberId"] = replacement["id"]
+                self._emit(
+                    "HostTransferred",
+                    {"fromMemberId": member_id, "toMemberId": replacement["id"]},
+                    now,
+                )
+        self._emit("PlayerRemoved", {"memberId": member_id, "nickname": player["nickname"]}, now)
+
     def _remove_player(self, host_id: str, target_id: str, now: datetime) -> None:
         if target_id == host_id:
             raise DomainError(ErrorCode.INVALID_COMMAND, "host cannot remove themselves")
         if self.data["phase"] not in {"lobby", "settlement", "paused"}:
             raise DomainError(ErrorCode.INVALID_PHASE, "players may be removed between hands only")
-        self._player(target_id)
-        del self.data["players"][target_id]
-        self.member_deletes.append(target_id)
-        self._emit("PlayerRemoved", {"memberId": target_id}, now)
+        self._remove_member(target_id, now)
 
     def _close(self, now: datetime) -> None:
         if self.data["phase"] == "playing":
@@ -837,12 +955,24 @@ class RoomGame:
         player["online"] = online
         player["lastSeenAt"] = _iso(now)
         if online:
+            player["managed"] = False
+            player["settlementReady"] = False
+        elif self.data.get("hand") is not None and player["id"] in self.data["hand"].get(
+            "memberOrder", []
+        ):
+            player["managed"] = True
+            player["settlementReady"] = False
+        if online:
             self.data["noConnectedSince"] = None
         elif not any(item["online"] for item in self.data["players"].values()):
             self.data["noConnectedSince"] = _iso(now)
         self._emit(
             "PlayerConnectionChanged",
-            {"memberId": member_id, "online": online},
+            {
+                "memberId": member_id,
+                "online": online,
+                "managed": bool(player.get("managed", False)),
+            },
             now,
         )
 
@@ -962,6 +1092,14 @@ class RoomGame:
             if player["sitOutNext"]:
                 player["sittingOut"] = True
                 player["sitOutNext"] = False
+        for member_id in [
+            member_id
+            for member_id, player in self.data["players"].items()
+            if player.get("leavePending", False)
+        ]:
+            self._remove_member(member_id, now)
+        for player in self.data["players"].values():
+            player["settlementReady"] = False
         self.data["hand"] = None
         self.adapter = None
         self.data["phase"] = "lobby"
@@ -1003,6 +1141,10 @@ class RoomGame:
                 street_bet = 0
                 committed = 0
                 last_action = None
+            if player.get("leavePending", False):
+                status = "leaving"
+            elif player.get("managed", False) and status not in {"folded", "all_in"}:
+                status = "managed"
             borrowed_total = int(player.get("borrowedTotal", 0))
             hole_cards = None
             if player_adapter is not None and material is not None:
@@ -1027,6 +1169,9 @@ class RoomGame:
                     "online": player["online"],
                     "isHost": player["id"] == self.data["hostMemberId"],
                     "rebuyPending": bool(player.get("rebuyPending", False)),
+                    "settlementReady": bool(player.get("settlementReady", False)),
+                    "managed": bool(player.get("managed", False)),
+                    "leavePending": bool(player.get("leavePending", False)),
                     "lastAction": last_action,
                     "holeCards": hole_cards,
                 }

@@ -23,4 +23,4 @@ Browser -> NGINX HTTPS -> J-Poker container (127.0.0.1:8000) -> FastAPI / Socket
 
 ## 容量边界
 
-当前部署目标为单实例 100 个活跃房间、800 条 Socket.IO 连接。达到该容量前不接入 Redis 或微服务：RoomActor、Socket.IO 广播和限流均有意保持在单进程内。扩展到多实例前，必须一起实现 Redis Socket.IO 消息管理、跨实例房间归属、分布式限流与互斥，不能只添加 `REDIS_URL`。
+当前部署目标为单实例 100 个活跃房间、800 条 Socket.IO 连接。达到该容量前不接入 Redis 或微服务：RoomActor、Socket.IO 广播和限流均有意保持在单进程内。Redis 的演进接入点已预留为可选能力：多实例部署时用于 Socket.IO 跨实例广播、短期限流/票据撤销黑名单、房间归属租约与指标缓存；它不保存牌局权威状态，也不替代 PostgreSQL 事件、快照和幂等事务。扩展到多实例前，必须一起实现 Redis Socket.IO 消息管理、跨实例房间归属、分布式限流与互斥，不能只添加 `REDIS_URL`。

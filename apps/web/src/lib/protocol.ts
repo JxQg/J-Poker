@@ -180,7 +180,8 @@ export interface SocketTicket {
   expiresAt?: string;
 }
 
-const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
+// Protocol documents may carry JSON Schema metadata such as `$schema`.
+const ajv = new Ajv({ allErrors: true, allowUnionTypes: true, strict: false });
 const snapshotBoundarySchema = {
   type: 'object',
   required: ['roomId', 'roomCode', 'version', 'phase', 'players'],

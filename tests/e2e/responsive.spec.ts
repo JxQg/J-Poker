@@ -35,7 +35,9 @@ test("home and lobby remain usable at supported viewport limits", async ({ page 
   await page.getByTestId("create-nickname").fill("Responsive E2E");
   await page.getByTestId("create-room").click();
   await expect(page.getByTestId("player-list")).toBeVisible();
-  await expect(page.getByTestId("ready-toggle")).toBeVisible();
+  await expect(page.getByTestId("start-game")).toBeVisible();
+  await expect(page.getByTestId("start-game")).toBeDisabled();
+  await expect(page.getByTestId("ready-toggle")).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
   await attachPage(page, testInfo, "mobile-lobby");
 

@@ -52,13 +52,14 @@ const expectPlayer = async (page: Page, nickname: string): Promise<void> => {
   ).toBeVisible();
 };
 
-const readyPlayersAndStart = async (host: Page, pages: Page[]): Promise<void> => {
-  for (const page of pages) {
-    await page.getByTestId("ready-toggle").click();
-    await expect(page.getByTestId("ready-toggle")).toContainText("取消准备");
+const readyPlayersAndStart = async (host: Page, guests: Page[]): Promise<void> => {
+  for (const guest of guests) {
+    await guest.getByTestId("ready-toggle").click();
+    await expect(guest.getByTestId("ready-toggle")).toContainText("取消准备");
   }
   await expect(host.getByTestId("start-game")).toBeEnabled();
   await host.getByTestId("start-game").click();
+  const pages = [host, ...guests];
   await Promise.all(
     pages.map((page) => expect(page.getByTestId("poker-table")).toBeVisible({ timeout: 20_000 })),
   );
@@ -123,6 +124,13 @@ const settlementVisible = async (pages: Page[]): Promise<boolean> => {
   return false;
 };
 
+const readyEligibleSettlers = async (pages: Page[]): Promise<void> => {
+  for (const page of pages) {
+    const ready = page.getByRole("button", { name: "准备下一手" });
+    if ((await ready.count()) > 0 && await ready.isVisible()) await ready.click();
+  }
+};
+
 test("two players can join, start a hand, act, and reconnect", async ({ browser }, testInfo) => {
   const hostClient = await isolatedPage(browser, testInfo);
   const guestClient = await isolatedPage(browser, testInfo);
@@ -138,7 +146,7 @@ test("two players can join, start a hand, act, and reconnect", async ({ browser 
     await expectPlayer(guest, "Host E2E");
     await expectPlayer(guest, "Guest E2E");
 
-    await readyPlayersAndStart(host, [guest, host]);
+    await readyPlayersAndStart(host, [guest]);
     await attachScreenshot(host, testInfo, "two-player-table");
     const cardsBeforeReload = await holeCardLabels(host);
     await expectOpponentCardsHidden(host, "Guest E2E");
@@ -172,7 +180,7 @@ test("a player joining during a hand participates in the next hand", async ({ br
   try {
     const roomCode = await createRoom(host, "Late Host");
     await joinRoom(guest, roomCode, "First Guest");
-    await readyPlayersAndStart(host, [guest, host]);
+    await readyPlayersAndStart(host, [guest]);
 
     await joinRoom(late, roomCode, "Next Hand Guest");
     await expect(late.getByText("你将在下一手加入")).toBeVisible();
@@ -180,6 +188,8 @@ test("a player joining during a hand participates in the next hand", async ({ br
     await expectOpponentCardsHidden(late, "Late Host");
 
     await foldCurrentPlayer([host, guest]);
+    await expect.poll(() => settlementVisible([host, guest]), { timeout: 10_000 }).toBe(true);
+    await readyEligibleSettlers([host, guest]);
     await expect(late.getByLabel("你的底牌")).toBeVisible({ timeout: 20_000 });
     await expect(late.getByText("你将在下一手加入")).toHaveCount(0);
     expect(await holeCardLabels(late)).toHaveLength(2);
@@ -211,7 +221,7 @@ test("eight isolated players can complete a hand without private-card leakage", 
     for (let index = 0; index < 8; index += 1) {
       await expectPlayer(hostClient.page, index === 0 ? "Table Host" : `Player ${index + 1}`);
     }
-    await readyPlayersAndStart(hostClient.page, pages.slice(1).concat(hostClient.page));
+    await readyPlayersAndStart(hostClient.page, pages.slice(1));
 
     for (const page of pages) {
       await expect(page.locator(".hero-hole-cards .playing-card")).toHaveCount(2);

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 168" role="img" aria-labelledby="title">
+  <title id="title">扑克牌背面</title>
+  <rect width="120" height="168" rx="9" fill="#f7f3e8"/>
+  <rect x="7" y="7" width="106" height="154" rx="6" fill="#a52f35" stroke="#611b23" stroke-width="2"/>
+  <path d="M13 13h94v142H13z" fill="none" stroke="#e6c873" stroke-width="2"/>
+  <g fill="#f5df9a" opacity=".85">
+    <path d="m60 24 10 10-10 10-10-10zM60 124l10 10-10 10-10-10z"/>
+    <path d="m28 74 10 10-10 10-10-10zM92 74l10 10-10 10-10-10z"/>
+  </g>
+  <circle cx="60" cy="84" r="29" fill="none" stroke="#f5df9a" stroke-width="3"/>
+  <path d="M60 55c8 10 15 18 15 28a15 15 0 0 1-12 15v8h9v5H48v-5h9v-8a15 15 0 0 1-12-15c0-10 7-18 15-28Z" fill="#f5df9a"/>
+</svg>

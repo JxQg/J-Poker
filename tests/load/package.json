@@ -1,0 +1,13 @@
+{
+  "name": "@holdem/load-tests",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "load": "node ./load.mjs"
+  },
+  "dependencies": {
+    "socket.io-client": "4.8.1"
+  }
+}

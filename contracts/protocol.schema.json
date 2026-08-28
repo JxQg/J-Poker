@@ -1,0 +1,2832 @@
+{
+  "$defs": {
+    "AuditEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "title": "Version",
+          "type": "integer"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "previousHash": {
+          "title": "Previoushash",
+          "type": "string"
+        },
+        "hash": {
+          "title": "Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version",
+        "type",
+        "payload",
+        "createdAt",
+        "previousHash",
+        "hash"
+      ],
+      "title": "AuditEvent",
+      "type": "object"
+    },
+    "AuditHand": {
+      "additionalProperties": false,
+      "properties": {
+        "handId": {
+          "title": "Handid",
+          "type": "string"
+        },
+        "handNumber": {
+          "title": "Handnumber",
+          "type": "integer"
+        },
+        "serverSeed": {
+          "title": "Serverseed",
+          "type": "string"
+        },
+        "serverCommitment": {
+          "title": "Servercommitment",
+          "type": "string"
+        },
+        "contributions": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Contributions",
+          "type": "object"
+        },
+        "deck": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Deck",
+          "type": "array"
+        },
+        "leafSalts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Leafsalts",
+          "type": "array"
+        },
+        "merkleRoot": {
+          "title": "Merkleroot",
+          "type": "string"
+        }
+      },
+      "required": [
+        "handId",
+        "handNumber",
+        "serverSeed",
+        "serverCommitment",
+        "contributions",
+        "deck",
+        "leafSalts",
+        "merkleRoot"
+      ],
+      "title": "AuditHand",
+      "type": "object"
+    },
+    "AuditPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schemaversion",
+          "type": "string"
+        },
+        "rulesVersion": {
+          "const": "pokerkit-0.7.5/nlhe-v1",
+          "default": "pokerkit-0.7.5/nlhe-v1",
+          "title": "Rulesversion",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "roomCode": {
+          "title": "Roomcode",
+          "type": "string"
+        },
+        "closedAt": {
+          "format": "date-time",
+          "title": "Closedat",
+          "type": "string"
+        },
+        "finalEventHash": {
+          "title": "Finaleventhash",
+          "type": "string"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/AuditEvent"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "hands": {
+          "items": {
+            "$ref": "#/$defs/AuditHand"
+          },
+          "title": "Hands",
+          "type": "array"
+        },
+        "signatureAlgorithm": {
+          "const": "Ed25519",
+          "default": "Ed25519",
+          "title": "Signaturealgorithm",
+          "type": "string"
+        },
+        "signingPublicKey": {
+          "title": "Signingpublickey",
+          "type": "string"
+        },
+        "signature": {
+          "title": "Signature",
+          "type": "string"
+        }
+      },
+      "required": [
+        "roomId",
+        "roomCode",
+        "closedAt",
+        "finalEventHash",
+        "events",
+        "hands",
+        "signingPublicKey",
+        "signature"
+      ],
+      "title": "AuditPackage",
+      "type": "object"
+    },
+    "CallCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "call",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "CallCommand",
+      "type": "object"
+    },
+    "CardView": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "deckIndex": {
+          "maximum": 51,
+          "minimum": 0,
+          "title": "Deckindex",
+          "type": "integer"
+        },
+        "salt": {
+          "title": "Salt",
+          "type": "string"
+        },
+        "proof": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Proof",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code",
+        "deckIndex",
+        "salt",
+        "proof"
+      ],
+      "title": "CardView",
+      "type": "object"
+    },
+    "CheckCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "check",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "CheckCommand",
+      "type": "object"
+    },
+    "CloseCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "close",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "CloseCommand",
+      "type": "object"
+    },
+    "CloseRoomCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "close_room",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "CloseRoomCommand",
+      "type": "object"
+    },
+    "CommandAccepted": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "accepted",
+          "default": "accepted",
+          "title": "Status",
+          "type": "string"
+        },
+        "commandId": {
+          "title": "Commandid",
+          "type": "string"
+        },
+        "appliedVersion": {
+          "title": "Appliedversion",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "commandId",
+        "appliedVersion"
+      ],
+      "title": "CommandAccepted",
+      "type": "object"
+    },
+    "CommandAck": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CommandAccepted"
+        },
+        {
+          "$ref": "#/$defs/CommandRejected"
+        }
+      ]
+    },
+    "CommandRejected": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "rejected",
+          "default": "rejected",
+          "title": "Status",
+          "type": "string"
+        },
+        "commandId": {
+          "title": "Commandid",
+          "type": "string"
+        },
+        "appliedVersion": {
+          "title": "Appliedversion",
+          "type": "integer"
+        },
+        "errorCode": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "commandId",
+        "appliedVersion",
+        "errorCode",
+        "message"
+      ],
+      "title": "CommandRejected",
+      "type": "object"
+    },
+    "CompletedHand": {
+      "additionalProperties": false,
+      "properties": {
+        "handId": {
+          "title": "Handid",
+          "type": "string"
+        },
+        "handNumber": {
+          "minimum": 1,
+          "title": "Handnumber",
+          "type": "integer"
+        },
+        "completedAt": {
+          "format": "date-time",
+          "title": "Completedat",
+          "type": "string"
+        },
+        "board": {
+          "items": {
+            "$ref": "#/$defs/CardView"
+          },
+          "title": "Board",
+          "type": "array"
+        },
+        "pot": {
+          "minimum": 0,
+          "title": "Pot",
+          "type": "integer"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/CompletedHandPlayer"
+          },
+          "title": "Players",
+          "type": "array"
+        }
+      },
+      "required": [
+        "handId",
+        "handNumber",
+        "completedAt",
+        "board",
+        "pot",
+        "players"
+      ],
+      "title": "CompletedHand",
+      "type": "object"
+    },
+    "CompletedHandPlayer": {
+      "additionalProperties": false,
+      "properties": {
+        "memberId": {
+          "title": "Memberid",
+          "type": "string"
+        },
+        "nickname": {
+          "title": "Nickname",
+          "type": "string"
+        },
+        "seat": {
+          "maximum": 9,
+          "minimum": 0,
+          "title": "Seat",
+          "type": "integer"
+        },
+        "holeCards": {
+          "items": {
+            "$ref": "#/$defs/CardView"
+          },
+          "title": "Holecards",
+          "type": "array"
+        },
+        "handName": {
+          "title": "Handname",
+          "type": "string"
+        },
+        "delta": {
+          "title": "Delta",
+          "type": "integer"
+        },
+        "folded": {
+          "title": "Folded",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "memberId",
+        "nickname",
+        "seat",
+        "holeCards",
+        "handName",
+        "delta",
+        "folded"
+      ],
+      "title": "CompletedHandPlayer",
+      "type": "object"
+    },
+    "ContributeRandomnessCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "contribute_randomness",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ShuffleContributionPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type",
+        "payload"
+      ],
+      "title": "ContributeRandomnessCommand",
+      "type": "object"
+    },
+    "CreateRoomRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "nickname": {
+          "maxLength": 20,
+          "minLength": 1,
+          "title": "Nickname",
+          "type": "string"
+        },
+        "config": {
+          "$ref": "#/$defs/RoomConfig"
+        }
+      },
+      "required": [
+        "nickname"
+      ],
+      "title": "CreateRoomRequest",
+      "type": "object"
+    },
+    "EmptyPayload": {
+      "additionalProperties": false,
+      "properties": {},
+      "title": "EmptyPayload",
+      "type": "object"
+    },
+    "ErrorCode": {
+      "enum": [
+        "AUTH_REQUIRED",
+        "INVALID_COMMAND",
+        "ROOM_NOT_FOUND",
+        "ROOM_FULL",
+        "ROOM_CLOSED",
+        "NOT_HOST",
+        "NOT_MEMBER",
+        "NOT_YOUR_TURN",
+        "INVALID_PHASE",
+        "INVALID_ACTION",
+        "INVALID_AMOUNT",
+        "STALE_VERSION",
+        "STALE_HAND",
+        "STALE_TURN",
+        "ENTROPY_REQUIRED",
+        "RATE_LIMITED",
+        "DATABASE_UNAVAILABLE"
+      ],
+      "title": "ErrorCode",
+      "type": "string"
+    },
+    "FairnessView": {
+      "additionalProperties": false,
+      "properties": {
+        "serverCommitment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Servercommitment"
+        },
+        "merkleRoot": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Merkleroot"
+        },
+        "contributionsReceived": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Contributionsreceived",
+          "type": "integer"
+        },
+        "contributionsRequired": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Contributionsrequired",
+          "type": "integer"
+        },
+        "contributionRequired": {
+          "default": false,
+          "title": "Contributionrequired",
+          "type": "boolean"
+        },
+        "auditAvailable": {
+          "default": false,
+          "title": "Auditavailable",
+          "type": "boolean"
+        }
+      },
+      "title": "FairnessView",
+      "type": "object"
+    },
+    "FoldCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "fold",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "FoldCommand",
+      "type": "object"
+    },
+    "HandView": {
+      "additionalProperties": false,
+      "properties": {
+        "handId": {
+          "title": "Handid",
+          "type": "string"
+        },
+        "handNumber": {
+          "minimum": 1,
+          "title": "Handnumber",
+          "type": "integer"
+        },
+        "buttonSeat": {
+          "maximum": 9,
+          "minimum": 0,
+          "title": "Buttonseat",
+          "type": "integer"
+        },
+        "street": {
+          "$ref": "#/$defs/Street"
+        },
+        "board": {
+          "items": {
+            "$ref": "#/$defs/CardView"
+          },
+          "title": "Board",
+          "type": "array"
+        },
+        "pot": {
+          "minimum": 0,
+          "title": "Pot",
+          "type": "integer"
+        },
+        "pots": {
+          "items": {
+            "$ref": "#/$defs/PotView"
+          },
+          "title": "Pots",
+          "type": "array"
+        },
+        "currentBet": {
+          "minimum": 0,
+          "title": "Currentbet",
+          "type": "integer"
+        },
+        "actorMemberId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actormemberid"
+        },
+        "actorSeat": {
+          "anyOf": [
+            {
+              "maximum": 9,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actorseat"
+        },
+        "turnId": {
+          "title": "Turnid",
+          "type": "string"
+        },
+        "deadlineAt": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadlineat"
+        },
+        "legalActions": {
+          "$ref": "#/$defs/LegalActions"
+        },
+        "settlement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SettlementView"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "handId",
+        "handNumber",
+        "buttonSeat",
+        "street",
+        "board",
+        "pot",
+        "pots",
+        "currentBet",
+        "turnId"
+      ],
+      "title": "HandView",
+      "type": "object"
+    },
+    "JoinRoomRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "nickname": {
+          "maxLength": 20,
+          "minLength": 1,
+          "title": "Nickname",
+          "type": "string"
+        }
+      },
+      "required": [
+        "nickname"
+      ],
+      "title": "JoinRoomRequest",
+      "type": "object"
+    },
+    "LegalActions": {
+      "additionalProperties": false,
+      "properties": {
+        "canFold": {
+          "default": false,
+          "title": "Canfold",
+          "type": "boolean"
+        },
+        "canCheck": {
+          "default": false,
+          "title": "Cancheck",
+          "type": "boolean"
+        },
+        "canCall": {
+          "default": false,
+          "title": "Cancall",
+          "type": "boolean"
+        },
+        "canRaise": {
+          "default": false,
+          "title": "Canraise",
+          "type": "boolean"
+        },
+        "canAllIn": {
+          "default": false,
+          "title": "Canallin",
+          "type": "boolean"
+        },
+        "callAmount": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Callamount",
+          "type": "integer"
+        },
+        "minRaiseTo": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Minraiseto"
+        },
+        "maxRaiseTo": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maxraiseto"
+        }
+      },
+      "title": "LegalActions",
+      "type": "object"
+    },
+    "PauseCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "pause",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/PausePayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "PauseCommand",
+      "type": "object"
+    },
+    "PausePayload": {
+      "additionalProperties": false,
+      "properties": {
+        "paused": {
+          "default": true,
+          "title": "Paused",
+          "type": "boolean"
+        }
+      },
+      "title": "PausePayload",
+      "type": "object"
+    },
+    "PauseRoomCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "pause_room",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "PauseRoomCommand",
+      "type": "object"
+    },
+    "PlayerActionCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "player_action",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/PlayerActionPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type",
+        "payload"
+      ],
+      "title": "PlayerActionCommand",
+      "type": "object"
+    },
+    "PlayerActionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "enum": [
+            "fold",
+            "check",
+            "call",
+            "raise_to"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "amount": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Amount"
+        }
+      },
+      "required": [
+        "action"
+      ],
+      "title": "PlayerActionPayload",
+      "type": "object"
+    },
+    "PlayerStatus": {
+      "enum": [
+        "waiting",
+        "active",
+        "folded",
+        "all_in",
+        "sitting_out"
+      ],
+      "title": "PlayerStatus",
+      "type": "string"
+    },
+    "PlayerView": {
+      "additionalProperties": false,
+      "properties": {
+        "memberId": {
+          "title": "Memberid",
+          "type": "string"
+        },
+        "nickname": {
+          "title": "Nickname",
+          "type": "string"
+        },
+        "seat": {
+          "maximum": 9,
+          "minimum": 0,
+          "title": "Seat",
+          "type": "integer"
+        },
+        "stack": {
+          "minimum": 0,
+          "title": "Stack",
+          "type": "integer"
+        },
+        "borrowedTotal": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Borrowedtotal",
+          "type": "integer"
+        },
+        "rankingScore": {
+          "title": "Rankingscore",
+          "type": "integer"
+        },
+        "streetBet": {
+          "minimum": 0,
+          "title": "Streetbet",
+          "type": "integer"
+        },
+        "committed": {
+          "minimum": 0,
+          "title": "Committed",
+          "type": "integer"
+        },
+        "status": {
+          "$ref": "#/$defs/PlayerStatus"
+        },
+        "ready": {
+          "title": "Ready",
+          "type": "boolean"
+        },
+        "online": {
+          "title": "Online",
+          "type": "boolean"
+        },
+        "isHost": {
+          "title": "Ishost",
+          "type": "boolean"
+        },
+        "rebuyPending": {
+          "default": false,
+          "title": "Rebuypending",
+          "type": "boolean"
+        },
+        "lastAction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lastaction"
+        },
+        "holeCards": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/CardView"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Holecards"
+        }
+      },
+      "required": [
+        "memberId",
+        "nickname",
+        "seat",
+        "stack",
+        "rankingScore",
+        "streetBet",
+        "committed",
+        "status",
+        "ready",
+        "online",
+        "isHost"
+      ],
+      "title": "PlayerView",
+      "type": "object"
+    },
+    "PotView": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "minimum": 0,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "eligibleMemberIds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Eligiblememberids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "amount",
+        "eligibleMemberIds"
+      ],
+      "title": "PotView",
+      "type": "object"
+    },
+    "RaiseToCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "raiseTo",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/RaiseToPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type",
+        "payload"
+      ],
+      "title": "RaiseToCommand",
+      "type": "object"
+    },
+    "RaiseToPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "amount": {
+          "exclusiveMinimum": 0,
+          "title": "Amount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amount"
+      ],
+      "title": "RaiseToPayload",
+      "type": "object"
+    },
+    "ReadyCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "ready",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ReadyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "ReadyCommand",
+      "type": "object"
+    },
+    "ReadyPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "ready": {
+          "default": true,
+          "title": "Ready",
+          "type": "boolean"
+        }
+      },
+      "title": "ReadyPayload",
+      "type": "object"
+    },
+    "RemovePlayerCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "remove_player",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/RemovePlayerPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type",
+        "payload"
+      ],
+      "title": "RemovePlayerCommand",
+      "type": "object"
+    },
+    "RemovePlayerPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "memberId": {
+          "title": "Memberid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "memberId"
+      ],
+      "title": "RemovePlayerPayload",
+      "type": "object"
+    },
+    "RequestRebuyCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "request_rebuy",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "RequestRebuyCommand",
+      "type": "object"
+    },
+    "RequestSnapshotCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "request_snapshot",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "RequestSnapshotCommand",
+      "type": "object"
+    },
+    "ResumeRoomCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "resume_room",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "ResumeRoomCommand",
+      "type": "object"
+    },
+    "RoomCommandUnion": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReadyCommand"
+        },
+        {
+          "$ref": "#/$defs/StartCommand"
+        },
+        {
+          "$ref": "#/$defs/PauseCommand"
+        },
+        {
+          "$ref": "#/$defs/CloseCommand"
+        },
+        {
+          "$ref": "#/$defs/SitOutCommand"
+        },
+        {
+          "$ref": "#/$defs/FoldCommand"
+        },
+        {
+          "$ref": "#/$defs/CheckCommand"
+        },
+        {
+          "$ref": "#/$defs/CallCommand"
+        },
+        {
+          "$ref": "#/$defs/RaiseToCommand"
+        },
+        {
+          "$ref": "#/$defs/ShuffleContributionCommand"
+        },
+        {
+          "$ref": "#/$defs/SetReadyCommand"
+        },
+        {
+          "$ref": "#/$defs/StartHandCommand"
+        },
+        {
+          "$ref": "#/$defs/ContributeRandomnessCommand"
+        },
+        {
+          "$ref": "#/$defs/PlayerActionCommand"
+        },
+        {
+          "$ref": "#/$defs/PauseRoomCommand"
+        },
+        {
+          "$ref": "#/$defs/ResumeRoomCommand"
+        },
+        {
+          "$ref": "#/$defs/CloseRoomCommand"
+        },
+        {
+          "$ref": "#/$defs/UpdateConfigCommand"
+        },
+        {
+          "$ref": "#/$defs/RemovePlayerCommand"
+        },
+        {
+          "$ref": "#/$defs/RequestSnapshotCommand"
+        },
+        {
+          "$ref": "#/$defs/RequestRebuyCommand"
+        }
+      ]
+    },
+    "RoomConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "maxPlayers": {
+          "default": 8,
+          "maximum": 10,
+          "minimum": 2,
+          "title": "Maxplayers",
+          "type": "integer"
+        },
+        "smallBlind": {
+          "default": 10,
+          "maximum": 1000000,
+          "minimum": 1,
+          "title": "Smallblind",
+          "type": "integer"
+        },
+        "bigBlind": {
+          "default": 20,
+          "maximum": 2000000,
+          "minimum": 2,
+          "title": "Bigblind",
+          "type": "integer"
+        },
+        "initialStack": {
+          "default": 2000,
+          "minimum": 1,
+          "title": "Initialstack",
+          "type": "integer"
+        },
+        "actionTimeoutSeconds": {
+          "default": 30,
+          "enum": [
+            15,
+            30,
+            60
+          ],
+          "title": "Actiontimeoutseconds",
+          "type": "integer"
+        }
+      },
+      "title": "RoomConfig",
+      "type": "object"
+    },
+    "RoomErrorMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "errorCode": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "commandId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commandid"
+        }
+      },
+      "required": [
+        "errorCode",
+        "message"
+      ],
+      "title": "RoomErrorMessage",
+      "type": "object"
+    },
+    "RoomEventMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "roomId",
+        "version",
+        "type",
+        "payload",
+        "createdAt"
+      ],
+      "title": "RoomEventMessage",
+      "type": "object"
+    },
+    "RoomIdentityResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "roomCode": {
+          "title": "Roomcode",
+          "type": "string"
+        },
+        "memberId": {
+          "title": "Memberid",
+          "type": "string"
+        }
+      },
+      "required": [
+        "roomId",
+        "roomCode",
+        "memberId"
+      ],
+      "title": "RoomIdentityResponse",
+      "type": "object"
+    },
+    "RoomLogEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "createdAt": {
+          "format": "date-time",
+          "title": "Createdat",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "message",
+        "createdAt"
+      ],
+      "title": "RoomLogEntry",
+      "type": "object"
+    },
+    "RoomPhase": {
+      "enum": [
+        "lobby",
+        "collecting_entropy",
+        "playing",
+        "settlement",
+        "paused",
+        "closed"
+      ],
+      "title": "RoomPhase",
+      "type": "string"
+    },
+    "RoomSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "protocolVersion": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Protocolversion",
+          "type": "string"
+        },
+        "rulesVersion": {
+          "const": "pokerkit-0.7.5/nlhe-v1",
+          "default": "pokerkit-0.7.5/nlhe-v1",
+          "title": "Rulesversion",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "roomCode": {
+          "title": "Roomcode",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "phase": {
+          "$ref": "#/$defs/RoomPhase"
+        },
+        "config": {
+          "$ref": "#/$defs/RoomConfig"
+        },
+        "you": {
+          "$ref": "#/$defs/YouView"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/PlayerView"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "hand": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HandView"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "roomLogs": {
+          "items": {
+            "$ref": "#/$defs/RoomLogEntry"
+          },
+          "title": "Roomlogs",
+          "type": "array"
+        },
+        "completedHands": {
+          "items": {
+            "$ref": "#/$defs/CompletedHand"
+          },
+          "title": "Completedhands",
+          "type": "array"
+        },
+        "fairness": {
+          "$ref": "#/$defs/FairnessView"
+        },
+        "serverNow": {
+          "format": "date-time",
+          "title": "Servernow",
+          "type": "string"
+        },
+        "closePending": {
+          "default": false,
+          "title": "Closepending",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "roomId",
+        "roomCode",
+        "version",
+        "phase",
+        "config",
+        "you",
+        "players",
+        "serverNow"
+      ],
+      "title": "RoomSnapshot",
+      "type": "object"
+    },
+    "SetReadyCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "set_ready",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ReadyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "SetReadyCommand",
+      "type": "object"
+    },
+    "SettlementAward": {
+      "additionalProperties": false,
+      "properties": {
+        "memberId": {
+          "title": "Memberid",
+          "type": "string"
+        },
+        "amount": {
+          "exclusiveMinimum": 0,
+          "title": "Amount",
+          "type": "integer"
+        },
+        "handName": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handname"
+        }
+      },
+      "required": [
+        "memberId",
+        "amount"
+      ],
+      "title": "SettlementAward",
+      "type": "object"
+    },
+    "SettlementView": {
+      "additionalProperties": false,
+      "properties": {
+        "awards": {
+          "items": {
+            "$ref": "#/$defs/SettlementAward"
+          },
+          "title": "Awards",
+          "type": "array"
+        }
+      },
+      "required": [
+        "awards"
+      ],
+      "title": "SettlementView",
+      "type": "object"
+    },
+    "ShuffleContributionCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "shuffle.contribute",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/ShuffleContributionPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type",
+        "payload"
+      ],
+      "title": "ShuffleContributionCommand",
+      "type": "object"
+    },
+    "ShuffleContributionPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "entropy": {
+          "anyOf": [
+            {
+              "maxLength": 44,
+              "minLength": 43,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Entropy"
+        },
+        "contribution": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "minLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contribution"
+        }
+      },
+      "title": "ShuffleContributionPayload",
+      "type": "object"
+    },
+    "SitOutCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "sitOut",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/SitOutPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "SitOutCommand",
+      "type": "object"
+    },
+    "SitOutPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "sittingOut": {
+          "default": true,
+          "title": "Sittingout",
+          "type": "boolean"
+        }
+      },
+      "title": "SitOutPayload",
+      "type": "object"
+    },
+    "SocketTicketResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "ticket": {
+          "title": "Ticket",
+          "type": "string"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "title": "Expiresat",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ticket",
+        "expiresAt"
+      ],
+      "title": "SocketTicketResponse",
+      "type": "object"
+    },
+    "StartCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "start",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "StartCommand",
+      "type": "object"
+    },
+    "StartHandCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "start_hand",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/EmptyPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type"
+      ],
+      "title": "StartHandCommand",
+      "type": "object"
+    },
+    "Street": {
+      "enum": [
+        "preflop",
+        "flop",
+        "turn",
+        "river",
+        "complete"
+      ],
+      "title": "Street",
+      "type": "string"
+    },
+    "UpdateConfigCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "commandId": {
+          "maxLength": 64,
+          "minLength": 8,
+          "title": "Commandid",
+          "type": "string"
+        },
+        "roomId": {
+          "title": "Roomid",
+          "type": "string"
+        },
+        "handId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Handid"
+        },
+        "turnId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turnid"
+        },
+        "expectedVersion": {
+          "minimum": 0,
+          "title": "Expectedversion",
+          "type": "integer"
+        },
+        "type": {
+          "const": "update_config",
+          "title": "Type",
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/$defs/UpdateConfigPayload"
+        }
+      },
+      "required": [
+        "commandId",
+        "roomId",
+        "expectedVersion",
+        "type",
+        "payload"
+      ],
+      "title": "UpdateConfigCommand",
+      "type": "object"
+    },
+    "UpdateConfigPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/RoomConfig"
+        }
+      },
+      "required": [
+        "config"
+      ],
+      "title": "UpdateConfigPayload",
+      "type": "object"
+    },
+    "YouView": {
+      "additionalProperties": false,
+      "properties": {
+        "memberId": {
+          "title": "Memberid",
+          "type": "string"
+        },
+        "seat": {
+          "maximum": 9,
+          "minimum": 0,
+          "title": "Seat",
+          "type": "integer"
+        },
+        "isHost": {
+          "title": "Ishost",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "memberId",
+        "seat",
+        "isHost"
+      ],
+      "title": "YouView",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "createRoomRequest": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CreateRoomRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "joinRoomRequest": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/JoinRoomRequest"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "roomIdentityResponse": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RoomIdentityResponse"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "socketTicketResponse": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SocketTicketResponse"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "roomCommand": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "call": "#/$defs/RoomCommandUnion",
+              "check": "#/$defs/RoomCommandUnion",
+              "close": "#/$defs/RoomCommandUnion",
+              "close_room": "#/$defs/RoomCommandUnion",
+              "contribute_randomness": "#/$defs/RoomCommandUnion",
+              "fold": "#/$defs/RoomCommandUnion",
+              "pause": "#/$defs/RoomCommandUnion",
+              "pause_room": "#/$defs/RoomCommandUnion",
+              "player_action": "#/$defs/RoomCommandUnion",
+              "raiseTo": "#/$defs/RoomCommandUnion",
+              "ready": "#/$defs/RoomCommandUnion",
+              "remove_player": "#/$defs/RoomCommandUnion",
+              "request_rebuy": "#/$defs/RoomCommandUnion",
+              "request_snapshot": "#/$defs/RoomCommandUnion",
+              "resume_room": "#/$defs/RoomCommandUnion",
+              "set_ready": "#/$defs/RoomCommandUnion",
+              "shuffle.contribute": "#/$defs/RoomCommandUnion",
+              "sitOut": "#/$defs/RoomCommandUnion",
+              "start": "#/$defs/RoomCommandUnion",
+              "start_hand": "#/$defs/RoomCommandUnion",
+              "update_config": "#/$defs/RoomCommandUnion"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/RoomCommandUnion"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Roomcommand"
+    },
+    "commandAck": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CommandAck"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "roomSnapshot": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RoomSnapshot"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "roomEvent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RoomEventMessage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "roomError": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RoomErrorMessage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "auditPackage": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AuditPackage"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "title": "ProtocolContract",
+  "type": "object"
+}

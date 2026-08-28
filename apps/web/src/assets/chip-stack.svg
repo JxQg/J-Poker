@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 104" role="img" aria-labelledby="title">
+  <title id="title">筹码堆</title>
+  <g stroke="#201c19" stroke-width="4">
+    <ellipse cx="58" cy="77" rx="45" ry="17" fill="#b98a3e"/>
+    <path d="M13 66v11c0 9 20 17 45 17s45-8 45-17V66" fill="#d8a94e"/>
+    <ellipse cx="58" cy="66" rx="45" ry="17" fill="#f2c66f"/>
+    <path d="M25 57 18 72M50 50l-2 32M76 51l5 31M97 58l-8 24" stroke="#8c2430" stroke-width="7"/>
+    <ellipse cx="78" cy="40" rx="39" ry="15" fill="#7f2731"/>
+    <path d="M39 29v11c0 8 17 15 39 15s39-7 39-15V29" fill="#a72e3b"/>
+    <ellipse cx="78" cy="29" rx="39" ry="15" fill="#d7585d"/>
+    <path d="m50 19-6 14m25-18-1 29m23-27 6 25m16-17-7 15" stroke="#f4e8c8" stroke-width="6"/>
+  </g>
+</svg>

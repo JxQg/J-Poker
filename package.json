@@ -1,0 +1,24 @@
+{
+  "name": "private-holdem-room",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names server,web \"pnpm dev:server\" \"pnpm dev:web\"",
+    "dev:server": "node scripts/python.mjs -m uvicorn app.main:socket_app --app-dir apps/server --reload --host 127.0.0.1 --port 8000",
+    "dev:web": "pnpm --filter @holdem/web dev",
+    "build": "pnpm --filter @holdem/web build",
+    "contracts:generate": "node scripts/python.mjs apps/server/scripts/export_contracts.py && json2ts contracts/protocol.schema.json --output apps/web/src/generated/protocol.ts",
+    "lint": "pnpm lint:web && node scripts/python.mjs -m ruff check apps/server && node scripts/python.mjs -m ruff format --check apps/server",
+    "lint:web": "pnpm --filter @holdem/web lint",
+    "typecheck": "pnpm --filter @holdem/web typecheck && node scripts/python.mjs -m mypy apps/server/app",
+    "test": "pnpm test:web && node scripts/python.mjs -m pytest apps/server/tests",
+    "test:web": "pnpm --filter @holdem/web test",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "concurrently": "9.2.1",
+    "json-schema-to-typescript": "15.0.4"
+  }
+}

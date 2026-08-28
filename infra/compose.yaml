@@ -1,0 +1,28 @@
+name: j-poker
+
+services:
+  j-poker:
+    image: ${JP_IMAGE:?set JP_IMAGE to the GHCR image tag}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL to the existing PostgreSQL instance}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?set APP_SECRET_KEY}
+      ALLOWED_ORIGINS: https://${SITE_ADDRESS:?set SITE_ADDRESS}
+      COOKIE_SECURE: "true"
+      AUTO_CREATE_SCHEMA: "false"
+      WEB_DIST_DIR: /app/web
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      RATE_LIMIT_CREATE_PER_MINUTE: ${RATE_LIMIT_CREATE_PER_MINUTE:-20}
+      RATE_LIMIT_JOIN_PER_MINUTE: ${RATE_LIMIT_JOIN_PER_MINUTE:-60}
+      RATE_LIMIT_TICKET_PER_MINUTE: ${RATE_LIMIT_TICKET_PER_MINUTE:-120}
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "127.0.0.1:${APP_PORT:-8000}:8000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

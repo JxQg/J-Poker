@@ -7,11 +7,13 @@ import { PlayingCard } from './PlayingCard';
 interface PlayerSeatProps {
   player: PlayerState;
   position: TablePosition;
+  playerCount: number;
   isHero: boolean;
   isActing: boolean;
   isButton: boolean;
   showCards: boolean;
   expanded: boolean;
+  showDetails: boolean;
   onToggleDetails: () => void;
 }
 
@@ -26,32 +28,69 @@ const STATUS_LABELS: Record<PlayerState['status'], string> = {
   eliminated: '等待补筹码',
 };
 
-const detailPlacement = ({ x, y }: TablePosition): 'bottom' | 'left' | 'right' => {
-  if (y <= 22) return 'bottom';
-  return x < 50 ? 'right' : 'left';
+interface SeatDetailsProps {
+  player: PlayerState;
+  isButton: boolean;
+  className?: string;
+}
+
+export const SeatDetails = ({ player, isButton, className = 'seat-details' }: SeatDetailsProps) => {
+  const statusLabel = player.lastAction || STATUS_LABELS[player.status];
+  const connectionLabel = isButton ? '庄家' : player.online ? '在线' : '离线';
+
+  return (
+    <section className={className} id={`seat-details-${player.seat}`} aria-label={`${player.nickname}的座位详情`}>
+      <div className="seat-detail-heading">
+        <span>#{player.seat + 1}</span>
+        <strong>{player.nickname}</strong>
+      </div>
+      <span className="seat-detail-value" aria-label={`本街下注 ${player.streetBet.toLocaleString('zh-CN')}`}>
+        <Coins size={14} aria-hidden="true" />
+        <span className="seat-detail-label">本街</span>
+        <strong>{player.streetBet.toLocaleString('zh-CN')}</strong>
+      </span>
+      <span className="seat-detail-value" aria-label={`累计投入 ${player.committed.toLocaleString('zh-CN')}`}>
+        <CircleDot size={14} aria-hidden="true" />
+        <span className="seat-detail-label">累计</span>
+        <strong>{player.committed.toLocaleString('zh-CN')}</strong>
+      </span>
+      <span className="seat-detail-state" aria-label={`当前状态 ${statusLabel}`}>
+        <CircleDot size={14} aria-hidden="true" />
+        <span>{statusLabel}</span>
+      </span>
+      <span className="seat-detail-state" aria-label={connectionLabel}>
+        {isButton ? <Crown size={14} aria-hidden="true" /> : player.online ? <Wifi size={14} aria-hidden="true" /> : <WifiOff size={14} aria-hidden="true" />}
+        <span>{connectionLabel}</span>
+      </span>
+    </section>
+  );
 };
 
 export const PlayerSeat = ({
   player,
   position,
+  playerCount,
   isHero,
   isActing,
   isButton,
   showCards,
   expanded,
+  showDetails,
   onToggleDetails,
 }: PlayerSeatProps) => {
   if (isHero) return null;
 
   const actionLabel = player.status === 'folded' ? null : betActionLabel(player.lastAction);
   const horizontalEdge = position.x <= 12 ? 'start' : position.x >= 88 ? 'end' : 'center';
+  const statusLabel = STATUS_LABELS[player.status];
 
   return (
   <div
     className={`player-seat occupied relative-seat-${position.relativeSeat} ${isActing ? 'acting' : ''}`}
     data-seat={player.seat}
+    data-player-count={playerCount}
     data-horizontal-edge={horizontalEdge}
-    data-detail-placement={detailPlacement(position)}
+    data-detail-placement={position.detailPlacement}
     style={{ left: `${position.x}%`, top: `${position.y}%` }}
   >
     {showCards && (
@@ -60,6 +99,7 @@ export const PlayerSeat = ({
         type="button"
         aria-label={`${player.nickname}的底牌`}
         aria-expanded={expanded}
+        aria-controls={`seat-details-${player.seat}`}
         title="查看座位详情"
         onClick={onToggleDetails}
       >
@@ -80,6 +120,9 @@ export const PlayerSeat = ({
         <strong data-testid="player-name">{player.nickname}</strong>
         {player.isHost && <Crown size={13} aria-label="房主" />}
         {!player.online && <WifiOff size={13} aria-label="离线" />}
+        {player.status !== 'active' && (
+          <CircleDot className={`seat-state-icon status-${player.status}`} size={13} aria-label={statusLabel} />
+        )}
       </div>
       <span className="seat-stack"><Coins size={13} aria-hidden="true" /> {player.stack.toLocaleString('zh-CN')}</span>
       {isButton && <span className="dealer-button" title="庄家按钮">D</span>}
@@ -90,14 +133,7 @@ export const PlayerSeat = ({
         <strong>{player.streetBet.toLocaleString('zh-CN')}</strong>
       </span>
     )}
-    {expanded && (
-      <section className="seat-details" id={`seat-details-${player.seat}`} aria-label={`${player.nickname}的座位详情`}>
-        <span><Coins size={14} aria-hidden="true" /> 本街 <strong>{player.streetBet.toLocaleString('zh-CN')}</strong></span>
-        <span><CircleDot size={14} aria-hidden="true" /> 累计 <strong>{player.committed.toLocaleString('zh-CN')}</strong></span>
-        <span><CircleDot size={14} aria-hidden="true" /> {player.lastAction || STATUS_LABELS[player.status]}</span>
-        <span>{isButton ? <Crown size={14} aria-hidden="true" /> : player.online ? <Wifi size={14} aria-hidden="true" /> : <WifiOff size={14} aria-hidden="true" />}{isButton ? '庄家' : player.online ? '在线' : '离线'}</span>
-      </section>
-    )}
+    {expanded && showDetails && <SeatDetails player={player} isButton={isButton} />}
   </div>
   );
 };

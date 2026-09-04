@@ -1,11 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { tablePositionForSeat } from '../lib/tableLayout';
-import type { PlayerState } from '../lib/protocol';
+import { tableDensityForPlayerCount, tablePositionForSeat } from '../lib/tableLayout';
+import type { GameSnapshot, PlayerState } from '../lib/protocol';
 import { gameSnapshot } from '../test/fixtures';
 import { ActionBar } from './ActionBar';
 import { Lobby } from './Lobby';
 import { PokerTable } from './PokerTable';
+import { RoomLogPanel } from './RoomLogPanel';
 
 describe('poker table', () => {
   it('renders the player layout, leaderboard, and legal actions', () => {
@@ -75,8 +76,8 @@ describe('poker table', () => {
     const firstSeat = screen.getByRole('button', { name: '按钮位的底牌' });
     fireEvent.click(firstSeat);
     expect(firstSeat).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByLabelText('按钮位的座位详情')).toHaveTextContent('本街 100');
-    expect(screen.getByLabelText('按钮位的座位详情')).toHaveTextContent('累计 100');
+    expect(screen.getByLabelText('按钮位的座位详情')).toHaveTextContent('本街100');
+    expect(screen.getByLabelText('按钮位的座位详情')).toHaveTextContent('累计100');
 
     const secondSeat = screen.getByRole('button', { name: '转牌手的底牌' });
     fireEvent.click(secondSeat);
@@ -89,13 +90,30 @@ describe('poker table', () => {
   });
 
   it('keeps the hero at the bottom while rotating every seat around the table', () => {
-    expect(tablePositionForSeat(4, 10, 4)).toMatchObject({ x: 50, y: 92, relativeSeat: 0 });
-    expect(tablePositionForSeat(1, 2, 0)).toMatchObject({ x: 50, y: 16, relativeSeat: 1 });
-    const tenSeatCoordinates = Array.from({ length: 10 }, (_, seat) => {
-      const position = tablePositionForSeat(seat, 10, 4);
+    const tenSeats = Array.from({ length: 10 }, (_, seat) => seat);
+    expect(tablePositionForSeat(4, tenSeats, 4)).toMatchObject({ x: 50, y: 84, relativeSeat: 0 });
+    expect(tablePositionForSeat(1, [0, 1], 0)).toMatchObject({ x: 50, y: 16, relativeSeat: 1 });
+    const tenSeatCoordinates = tenSeats.map((seat) => {
+      const position = tablePositionForSeat(seat, tenSeats, 4);
       return `${position.x}:${position.y}`;
     });
     expect(new Set(tenSeatCoordinates).size).toBe(10);
+  });
+
+  it.each([
+    [2, 'roomy'],
+    [4, 'roomy'],
+    [6, 'standard'],
+    [8, 'compact'],
+    [10, 'dense'],
+  ] as const)('uses a stable %s-player %s layout with no duplicate seats', (playerCount, density) => {
+    const seats = Array.from({ length: playerCount }, (_, seat) => seat);
+    const positions = seats.map((seat) => tablePositionForSeat(seat, seats, 0));
+
+    expect(tableDensityForPlayerCount(playerCount)).toBe(density);
+    expect(positions[0]).toMatchObject({ x: 50, y: 84, relativeSeat: 0 });
+    expect(new Set(positions.map(({ x, y }) => `${x}:${y}`)).size).toBe(playerCount);
+    expect(positions.every(({ detailPlacement }) => ['top', 'bottom', 'left', 'right'].includes(detailPlacement))).toBe(true);
   });
 
   it('opens the poker terms drawer from the action dock', () => {
@@ -106,18 +124,112 @@ describe('poker table', () => {
     expect(screen.getByRole('dialog', { name: '德州扑克术语' })).toHaveTextContent('RFI / Open Raise');
   });
 
-  it('centers the settlement toast and exposes the next-hand ready action', () => {
-    const settlementSnapshot = {
+  it('centers the settlement toast and keeps final hands with the next-hand action', () => {
+    const settlementSnapshot: GameSnapshot = {
       ...gameSnapshot,
       phase: 'settlement' as const,
       settlement: {
         winners: [{ memberId: 'member-1', nickname: '河牌手', amount: 220, handName: '一对' }],
       },
+      completedHands: [{
+        handId: 'hand-1',
+        handNumber: 1,
+        completedAt: '2030-01-01T00:00:30.000Z',
+        board: ['Ah', '7d', '2c', 'Ts', '9h'],
+        pot: 220,
+        players: [
+          {
+            memberId: 'member-1',
+            nickname: '河牌手',
+            seat: 0,
+            holeCards: ['As', 'Kh'],
+            handName: '一对',
+            delta: 120,
+            folded: false,
+          },
+          {
+            memberId: 'member-2',
+            nickname: '按钮位',
+            seat: 2,
+            holeCards: ['Qd', 'Jd'],
+            handName: '高牌',
+            delta: -120,
+            folded: false,
+          },
+        ],
+      }],
     };
-    render(<PokerTable snapshot={settlementSnapshot} pending={false} onCommand={vi.fn()} />);
-    expect(screen.getByText('准备下一手')).toBeInTheDocument();
+    render(
+      <>
+        <PokerTable snapshot={settlementSnapshot} pending={false} onCommand={vi.fn()} />
+        <ActionBar snapshot={settlementSnapshot} pending={false} onCommand={vi.fn()} />
+      </>,
+    );
+    expect(screen.getByTestId('settlement-ready')).toHaveTextContent('准备下一手');
+    expect(screen.getByTestId('settlement-player-member-1')).toHaveTextContent('一对');
+    expect(screen.getByTestId('settlement-player-member-2')).toHaveTextContent('高牌');
     expect(document.querySelector('.settlement-positioner')).toBeInTheDocument();
     expect(document.querySelector('.settlement-strip')).toBeInTheDocument();
+  });
+
+  it('shows every showdown player while keeping folded cards and hand names private', () => {
+    const resultSnapshot: GameSnapshot = {
+      ...gameSnapshot,
+      roomLogs: [{
+        id: 'settled-log',
+        type: 'HandSettled',
+        message: '第 1 手结算完成',
+        createdAt: '2030-01-01T00:01:00.000Z',
+        handId: 'completed-hand-1',
+      }],
+      completedHands: [{
+        handId: 'completed-hand-1',
+        handNumber: 1,
+        completedAt: '2030-01-01T00:01:00.000Z',
+        board: ['Ah', '7d', '2c', 'Ts', '9h'],
+        pot: 600,
+        players: [
+          {
+            memberId: 'winner',
+            nickname: '赢家',
+            seat: 0,
+            holeCards: ['As', 'Kh'],
+            handName: '一对',
+            delta: 320,
+            folded: false,
+          },
+          {
+            memberId: 'showdown-loser',
+            nickname: '摊牌玩家',
+            seat: 1,
+            holeCards: ['Qd', 'Jd'],
+            handName: '高牌',
+            delta: -180,
+            folded: false,
+          },
+          {
+            memberId: 'folded-player',
+            nickname: '弃牌玩家',
+            seat: 2,
+            holeCards: [],
+            handName: '未摊牌',
+            delta: -140,
+            folded: true,
+          },
+        ],
+      }],
+    };
+    render(<RoomLogPanel snapshot={resultSnapshot} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /房间日志/ }));
+
+    expect(screen.getByTestId('completed-hand-player-winner')).toHaveTextContent('一对');
+    expect(screen.getByTestId('completed-hand-player-showdown-loser')).toHaveTextContent('高牌');
+    expect(screen.getByTestId('completed-hand-player-winner').querySelectorAll('.playing-card')).toHaveLength(2);
+    expect(screen.getByTestId('completed-hand-player-showdown-loser').querySelectorAll('.playing-card')).toHaveLength(2);
+    expect(screen.getByTestId('completed-hand-player-folded-player')).toHaveTextContent('已弃牌');
+    expect(screen.getByTestId('completed-hand-player-folded-player').querySelectorAll('.playing-card')).toHaveLength(0);
+    expect(screen.getByTestId('completed-hand-player-folded-player')).not.toHaveTextContent('未摊牌');
   });
 
   it('shows the rebuy action in the waiting lobby at or below the big blind', () => {

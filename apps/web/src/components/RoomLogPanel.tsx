@@ -19,8 +19,15 @@ const HandResult = ({ hand }: { hand: CompletedHand }) => (
       {hand.board.map((card, index) => <PlayingCard card={card} compact key={`${card}-${index}`} />)}
     </div>
     <div className="log-hand-players">
-      {hand.players.map((player) => (
-        <div className={`log-hand-player ${player.folded ? 'folded' : ''}`} key={player.memberId}>
+      {hand.players.map((player) => {
+        const showedDown = !player.folded && player.holeCards.length === 2;
+
+        return (
+        <div
+          className={`log-hand-player ${player.folded ? 'folded' : ''}`}
+          data-testid={`completed-hand-player-${player.memberId}`}
+          key={player.memberId}
+        >
           <div className="log-player-line">
             <strong>{player.nickname}</strong>
             <span className={player.delta > 0 ? 'positive' : player.delta < 0 ? 'negative' : ''}>
@@ -28,11 +35,18 @@ const HandResult = ({ hand }: { hand: CompletedHand }) => (
             </span>
           </div>
           <div className="log-player-cards">
-            {player.holeCards.map((card, index) => <PlayingCard card={card} compact key={`${card}-${index}`} />)}
-            {!player.folded && <small>{player.handName || 'Uncontested'}</small>}
+            {showedDown ? (
+              <>
+                {player.holeCards.map((card, index) => <PlayingCard card={card} compact key={`${card}-${index}`} />)}
+                <small className="log-player-hand-name">{player.handName || '未摊牌'}</small>
+              </>
+            ) : (
+              <small className="log-player-folded">已弃牌</small>
+            )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   </section>
 );

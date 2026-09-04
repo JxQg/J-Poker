@@ -1,7 +1,8 @@
 import { ArrowUp, BookOpen, CheckCircle2, Coins, Flame, LoaderCircle, Minus, Plus, XCircle } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useDeadline } from '../hooks/useDeadline';
-import type { GameSnapshot, RoomCommandType } from '../lib/protocol';
+import type { CompletedHand, GameSnapshot, RoomCommandType } from '../lib/protocol';
+import { PlayingCard } from './PlayingCard';
 import { PokerTermsDrawer } from './PokerTermsDrawer';
 
 interface ActionBarProps {
@@ -9,6 +10,54 @@ interface ActionBarProps {
   pending: boolean;
   onCommand: (type: RoomCommandType, payload?: Record<string, unknown>) => Promise<unknown>;
 }
+
+interface SettlementSummaryProps {
+  hand?: CompletedHand;
+  readyAvailable: boolean;
+  ready: boolean;
+  pending: boolean;
+  onReady: () => void;
+}
+
+const SettlementSummary = ({ hand, readyAvailable, ready, pending, onReady }: SettlementSummaryProps) => (
+  <section className="settlement-summary" aria-label="本手最终牌型">
+    <div className="settlement-summary-heading">
+      <span>本手摊牌</span>
+      {hand && <strong>底池 {hand.pot.toLocaleString('zh-CN')}</strong>}
+      {readyAvailable && (
+        <button
+          className={`settlement-ready-command ${ready ? 'ready' : ''}`}
+          data-testid="settlement-ready"
+          type="button"
+          disabled={pending || ready}
+          onClick={onReady}
+        >
+          <CheckCircle2 size={16} /> {ready ? '已准备下一手' : '准备下一手'}
+        </button>
+      )}
+    </div>
+    {hand ? (
+      <div className="settlement-summary-list" role="list">
+        {[...hand.players].sort((left, right) => left.seat - right.seat).map((player) => {
+          const showedDown = !player.folded && player.holeCards.length === 2;
+          return (
+            <article className={`settlement-summary-player ${player.folded ? 'folded' : ''}`} data-testid={`settlement-player-${player.memberId}`} key={player.memberId} role="listitem">
+              <span className="settlement-player-name">#{player.seat + 1} {player.nickname}</span>
+              <div className="settlement-player-result">
+                {showedDown ? (
+                  <>
+                    {player.holeCards.map((card, index) => <PlayingCard card={card} compact key={`${card}-${index}`} />)}
+                    <strong>{player.handName}</strong>
+                  </>
+                ) : <small>已弃牌</small>}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    ) : <p className="settlement-summary-empty">正在整理本手摊牌结果</p>}
+  </section>
+);
 
 export const ActionBar = ({ snapshot, pending, onCommand }: ActionBarProps) => {
   const legal = snapshot.legalActions;
@@ -23,6 +72,18 @@ export const ActionBar = ({ snapshot, pending, onCommand }: ActionBarProps) => {
   const [raiseTo, setRaiseTo] = useState(minRaise);
   const [termsOpen, setTermsOpen] = useState(false);
   const raisePresets = [2, 3].map((multiple) => ({ multiple, amount: snapshot.currentBet * multiple }));
+  const settledHand = useMemo(() => (
+    snapshot.phase === 'settlement'
+      ? snapshot.completedHands.find((hand) => hand.handId === snapshot.handId) ?? snapshot.completedHands.at(-1)
+      : undefined
+  ), [snapshot.completedHands, snapshot.handId, snapshot.phase]);
+  const settlementReadyAvailable = Boolean(
+    snapshot.phase === 'settlement'
+    && hero
+    && !hero.managed
+    && !hero.leavePending
+    && hero.status !== 'folded',
+  );
   const raiseMultiplier = snapshot.currentBet > 0 && raiseTo > 0
     ? `${(raiseTo / snapshot.currentBet).toFixed(1).replace(/\.0$/, '')}X`
     : '';
@@ -54,7 +115,15 @@ export const ActionBar = ({ snapshot, pending, onCommand }: ActionBarProps) => {
       <div className="turn-timer" aria-label={remainingSeconds === null ? '无行动倒计时' : `剩余 ${remainingSeconds} 秒`}>
         <span style={{ width: `${progress}%` }} className={remainingSeconds !== null && remainingSeconds <= 8 ? 'urgent' : ''} />
       </div>
-      {!isHeroTurn ? (
+      {snapshot.phase === 'settlement' ? (
+        <SettlementSummary
+          hand={settledHand}
+          pending={pending}
+          ready={hero?.settlementReady ?? false}
+          readyAvailable={settlementReadyAvailable}
+          onReady={() => void onCommand('set_settlement_ready', { ready: true })}
+        />
+      ) : !isHeroTurn ? (
         <div className="waiting-action-state">
           <span className="waiting-pulse" aria-hidden="true" />
           <strong>{waitingLabel}</strong>
@@ -157,6 +226,7 @@ export const ActionBar = ({ snapshot, pending, onCommand }: ActionBarProps) => {
             </div>
             <button
               className="all-in-action"
+              data-testid="action-showhand"
               type="button"
               title="SHOWHAND 全下"
               disabled={pending || !legal.canAllIn}

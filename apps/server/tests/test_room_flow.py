@@ -52,6 +52,63 @@ def _command(
     )
 
 
+def _activate_direct_hand(room: RoomGame, now: datetime) -> None:
+    room._begin_shuffle(now)
+    hand = room.data["hand"]
+    for index, member_id in enumerate(hand["requiredMemberIds"]):
+        room._contribute(
+            member_id,
+            hand["id"],
+            hand["turnId"],
+            {"contribution": (bytes([index + 1]) * 32).hex()},
+            now,
+        )
+    assert room.data["phase"] == "playing"
+
+
+def _complete_with_checks_or_calls(room: RoomGame, now: datetime) -> None:
+    while room.data["phase"] == "playing":
+        adapter = room.adapter
+        assert adapter is not None
+        member_id = adapter.actor_member_id
+        assert member_id is not None
+        legal = adapter.legal_actions(member_id)
+        action = "check" if legal.can_check else "call"
+        room._act(
+            member_id,
+            room.data["hand"]["id"],
+            room.data["hand"]["turnId"],
+            action,
+            None,
+            now,
+        )
+
+
+def _complete_with_all_ins(room: RoomGame, now: datetime) -> None:
+    while room.data["phase"] == "playing":
+        adapter = room.adapter
+        assert adapter is not None
+        member_id = adapter.actor_member_id
+        assert member_id is not None
+        legal = adapter.legal_actions(member_id)
+        if legal.can_raise:
+            assert legal.max_raise_to is not None
+            action, amount = "raiseTo", legal.max_raise_to
+        elif legal.can_call:
+            action, amount = "call", None
+        else:
+            assert legal.can_check
+            action, amount = "check", None
+        room._act(
+            member_id,
+            room.data["hand"]["id"],
+            room.data["hand"]["turnId"],
+            action,
+            amount,
+            now,
+        )
+
+
 @pytest.mark.asyncio
 async def test_room_flow_idempotency_private_projection_recovery_and_audit(tmp_path: Path) -> None:
     settings = _settings(tmp_path / "poker.db")
@@ -281,3 +338,110 @@ def test_next_hand_requires_stacks_strictly_above_big_blind(tmp_path: Path) -> N
     )
     assert room.data["roomLogs"][-2]["message"] == "Player 0 跟注至20 · 合计20"
     assert room.data["roomLogs"][-1]["message"] == "Player 1 加注至60 · 合计80"
+
+
+def test_eight_player_all_in_history_projects_every_showdown_hand(tmp_path: Path) -> None:
+    room = RoomGame.create(
+        room_id="room-eight-showdown",
+        code="EIGHTALL",
+        member_id="player-0",
+        nickname="Player 0",
+        config=RoomConfig(max_players=8),
+        settings=_settings(tmp_path / "eight-player-showdown.db"),
+    )
+    for index in range(1, 8):
+        room.add_member(
+            member_id=f"player-{index}",
+            guest_hash=f"hash-{index}",
+            nickname=f"Player {index}",
+        )
+    for player in room.data["players"].values():
+        player["ready"] = True
+        player["online"] = True
+
+    now = datetime.now(UTC)
+    _activate_direct_hand(room, now)
+    _complete_with_all_ins(room, now)
+
+    assert room.data["phase"] == "settlement"
+    history = room.data["completedHands"][-1]
+    assert len(history["players"]) == 8
+    assert all(not player["folded"] for player in history["players"])
+    assert all(len(player["holeIndices"]) == 2 for player in history["players"])
+
+    projection = room.projection("player-0", now)
+    completed = projection["completedHands"][-1]
+    assert len(completed["players"]) == 8
+    assert all(len(player["holeCards"]) == 2 for player in completed["players"])
+    assert all(player["handName"] not in {"", "未摊牌"} for player in completed["players"])
+
+
+def test_completed_hand_projection_hides_folded_cards_but_keeps_showdown_cards(tmp_path: Path) -> None:
+    room = RoomGame.create(
+        room_id="room-folded-history",
+        code="FOLDHIST",
+        member_id="player-0",
+        nickname="Player 0",
+        config=RoomConfig(max_players=3),
+        settings=_settings(tmp_path / "folded-history.db"),
+    )
+    for index in range(1, 3):
+        room.add_member(
+            member_id=f"player-{index}",
+            guest_hash=f"hash-{index}",
+            nickname=f"Player {index}",
+        )
+    for player in room.data["players"].values():
+        player["ready"] = True
+        player["online"] = True
+
+    now = datetime.now(UTC)
+    _activate_direct_hand(room, now)
+    folded_member_id: str | None = None
+    for _ in range(3):
+        adapter = room.adapter
+        assert adapter is not None
+        member_id = adapter.actor_member_id
+        assert member_id is not None
+        legal = adapter.legal_actions(member_id)
+        if legal.can_fold:
+            room._act(
+                member_id,
+                room.data["hand"]["id"],
+                room.data["hand"]["turnId"],
+                "fold",
+                None,
+                now,
+            )
+            folded_member_id = member_id
+            break
+        action = "check" if legal.can_check else "call"
+        room._act(
+            member_id,
+            room.data["hand"]["id"],
+            room.data["hand"]["turnId"],
+            action,
+            None,
+            now,
+        )
+    assert folded_member_id is not None
+    _complete_with_checks_or_calls(room, now)
+
+    history = room.data["completedHands"][-1]
+    saved_folded = next(player for player in history["players"] if player["memberId"] == folded_member_id)
+    assert len(saved_folded["holeIndices"]) == 2
+
+    viewer = next(member_id for member_id in room.data["players"] if member_id != folded_member_id)
+    projection = room.projection(viewer, now)
+    live_folded = next(player for player in projection["players"] if player["memberId"] == folded_member_id)
+    assert "holeCards" not in live_folded
+
+    completed = projection["completedHands"][-1]
+    folded = next(player for player in completed["players"] if player["memberId"] == folded_member_id)
+    assert folded["holeCards"] == []
+    assert folded["handName"] == "未摊牌"
+    assert all(
+        len(player["holeCards"]) == 2 and player["handName"] != "未摊牌"
+        for player in completed["players"]
+        if not player["folded"]
+    )

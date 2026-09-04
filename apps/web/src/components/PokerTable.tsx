@@ -1,10 +1,11 @@
-import { CircleDollarSign, CheckCircle2, LockKeyhole, Pause, Play, ShieldCheck, UserRound, WalletCards, XCircle } from 'lucide-react';
+import { CircleDollarSign, LockKeyhole, Pause, Play, ShieldCheck, UserRound, WalletCards, XCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 import type { GameSnapshot, RoomCommandType } from '../lib/protocol';
 import { betActionLabel } from '../lib/playerAction';
-import { tablePositionForSeat } from '../lib/tableLayout';
-import { PlayerSeat } from './PlayerSeat';
+import { tableDensityForPlayerCount, tablePositionForSeat } from '../lib/tableLayout';
+import { PlayerSeat, SeatDetails } from './PlayerSeat';
 import { PlayingCard } from './PlayingCard';
 import { LeaderboardPanel } from './LeaderboardPanel';
 import { RoomLogPanel } from './RoomLogPanel';
@@ -15,15 +16,199 @@ interface PokerTableProps {
   onCommand: (type: RoomCommandType, payload?: Record<string, unknown>) => Promise<unknown>;
 }
 
+interface Rectangle {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+interface SettlementRail {
+  top: number;
+  width: number;
+}
+
+interface VerticalInterval {
+  start: number;
+  end: number;
+}
+
+const intersects = (first: Rectangle, second: Rectangle): boolean => (
+  first.left < second.right
+  && first.right > second.left
+  && first.top < second.bottom
+  && first.bottom > second.top
+);
+
+const visibleRectangle = (element: HTMLElement): Rectangle | null => {
+  const style = window.getComputedStyle(element);
+  const bounds = element.getBoundingClientRect();
+  if (style.display === 'none' || style.visibility === 'hidden' || bounds.width === 0 || bounds.height === 0) return null;
+  return bounds;
+};
+
+const useSettlementSafeRail = (active: boolean) => {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+  const [rail, setRail] = useState<SettlementRail | null>(null);
+
+  useLayoutEffect(() => {
+    if (!active) {
+      setRail(null);
+      return undefined;
+    }
+
+    const update = () => {
+      const surface = surfaceRef.current;
+      const rail = railRef.current;
+      if (!surface || !rail) return;
+
+      const surfaceBounds = surface.getBoundingClientRect();
+      const railBounds = rail.getBoundingClientRect();
+      if (railBounds.width === 0 || railBounds.height === 0) return;
+      const protectedBounds = [...surface.querySelectorAll<HTMLElement>(
+        '.board-zone, .hero-hand-zone, .seat-shell, .seat-cards, .seat-bet',
+      )].flatMap((element) => {
+        const bounds = visibleRectangle(element);
+        return bounds ? [bounds] : [];
+      });
+      const board = surface.querySelector<HTMLElement>('.board-zone');
+      const boardBounds = board ? visibleRectangle(board) : null;
+      const compactViewport = window.matchMedia('(max-width: 740px)').matches;
+      const widestRail = Math.min(railBounds.width, surfaceBounds.width - 24);
+      const narrowestRail = Math.min(widestRail, compactViewport ? 164 : 260);
+      const railWidths: number[] = [];
+      for (let width = widestRail; width >= narrowestRail; width -= 12) {
+        railWidths.push(Math.round(width));
+      }
+      if (!railWidths.includes(Math.round(narrowestRail))) railWidths.push(Math.round(narrowestRail));
+
+      const centerForWidth = (width: number): number | null => {
+        const halfHeight = railBounds.height / 2;
+        const edgeInset = 6;
+        const minimum = surfaceBounds.top + halfHeight + edgeInset;
+        const maximum = surfaceBounds.bottom - halfHeight - edgeInset;
+        if (minimum > maximum) return null;
+
+        const candidateLeft = surfaceBounds.left + (surfaceBounds.width - width) / 2;
+        const candidateRight = candidateLeft + width;
+        const blocked = protectedBounds
+          .filter((bounds) => candidateLeft < bounds.right && candidateRight > bounds.left)
+          .map((bounds): VerticalInterval => ({
+            start: Math.max(minimum, bounds.top - halfHeight - edgeInset),
+            end: Math.min(maximum, bounds.bottom + halfHeight + edgeInset),
+          }))
+          .filter((interval) => interval.start < interval.end)
+          .sort((left, right) => left.start - right.start);
+        const merged: VerticalInterval[] = [];
+        for (const interval of blocked) {
+          const previous = merged.at(-1);
+          if (previous && interval.start <= previous.end) {
+            previous.end = Math.max(previous.end, interval.end);
+          } else {
+            merged.push({ ...interval });
+          }
+        }
+        const available: VerticalInterval[] = [];
+        let cursor = minimum;
+        for (const interval of merged) {
+          if (interval.start > cursor) available.push({ start: cursor, end: interval.start });
+          cursor = Math.max(cursor, interval.end);
+        }
+        if (cursor < maximum) available.push({ start: cursor, end: maximum });
+        if (available.length === 0) return null;
+
+        const targets = boardBounds
+          ? [
+              boardBounds.top - halfHeight - edgeInset,
+              boardBounds.bottom + halfHeight + edgeInset,
+            ]
+          : [
+              surfaceBounds.top + surfaceBounds.height * 0.29,
+              surfaceBounds.top + surfaceBounds.height * 0.71,
+            ];
+        return available.reduce<{ center: number; score: number } | null>((best, interval) => (
+          targets.reduce<{ center: number; score: number } | null>((intervalBest, target) => {
+            const center = Math.min(interval.end, Math.max(interval.start, target));
+            const candidate = { center, score: Math.abs(center - target) };
+            if (!intervalBest || candidate.score < intervalBest.score) return candidate;
+            return intervalBest;
+          }, best)
+        ), null)?.center ?? null;
+      };
+
+      const safeRail = railWidths.map((width) => ({ width, center: centerForWidth(width) }))
+        .find(({ center }) => center !== null);
+      const fallbackWidth = railWidths.at(-1) ?? Math.round(widestRail);
+      const fallback = [0.29, 0.71, 0.23, 0.77, 0.35, 0.65].map((ratio) => {
+        const candidateCenter = surfaceBounds.top + surfaceBounds.height * ratio;
+        const candidate: Rectangle = {
+          left: surfaceBounds.left + (surfaceBounds.width - fallbackWidth) / 2,
+          right: surfaceBounds.left + (surfaceBounds.width + fallbackWidth) / 2,
+          top: candidateCenter - railBounds.height / 2,
+          bottom: candidateCenter + railBounds.height / 2,
+        };
+        const escapesSurface = candidate.left < surfaceBounds.left
+          || candidate.right > surfaceBounds.right
+          || candidate.top < surfaceBounds.top
+          || candidate.bottom > surfaceBounds.bottom;
+        const collisions = protectedBounds.filter((bounds) => intersects(candidate, bounds)).length;
+        return { center: candidateCenter, collisions: collisions + (escapesSurface ? 100 : 0) };
+      });
+      const fallbackRail = fallback.reduce((current, candidate) => (
+        candidate.collisions < current.collisions ? candidate : current
+      ));
+      const next: SettlementRail = {
+        top: Math.round((safeRail?.center ?? fallbackRail.center) - surfaceBounds.top),
+        width: safeRail?.width ?? fallbackWidth,
+      };
+      setRail((current) => (
+        current
+        && Math.abs(current.top - next.top) < 1
+        && Math.abs(current.width - next.width) < 1
+          ? current
+          : next
+      ));
+    };
+
+    update();
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(update);
+    if (surfaceRef.current && resizeObserver) resizeObserver.observe(surfaceRef.current);
+    if (railRef.current && resizeObserver) resizeObserver.observe(railRef.current);
+    const animationFrame = typeof window.requestAnimationFrame === 'function'
+      ? window.requestAnimationFrame(update)
+      : null;
+    window.addEventListener('resize', update);
+    return () => {
+      resizeObserver?.disconnect();
+      if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener('resize', update);
+    };
+  }, [active]);
+
+  return { surfaceRef, railRef, rail };
+};
+
 export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) => {
   const [expandedSeat, setExpandedSeat] = useState<number | null>(null);
+  const compactViewport = useMediaQuery('(max-width: 740px)');
+  const { surfaceRef, railRef, rail: settlementRail } = useSettlementSafeRail(Boolean(snapshot.settlement));
   const hero = snapshot.players.find((player) => player.memberId === snapshot.heroMemberId);
   const isHost = hero?.isHost ?? false;
   const potTotal = snapshot.pots.reduce((sum, pot) => sum + pot.amount, 0)
     || snapshot.players.reduce((sum, player) => sum + player.streetBet, 0);
   const heroSeat = hero?.seat ?? 0;
-  const heroActionLabel = hero && hero.status !== 'folded' ? betActionLabel(hero.lastAction) : null;
   const opponents = snapshot.players.filter((player) => player.memberId !== snapshot.heroMemberId);
+  const occupiedSeats = snapshot.players.map((player) => player.seat);
+  const tableDensity = tableDensityForPlayerCount(occupiedSeats.length);
+  const positionedOpponents = opponents.map((player) => ({
+    player,
+    position: tablePositionForSeat(player.seat, occupiedSeats, heroSeat),
+  }));
+  const expandedOpponent = positionedOpponents.find(({ player }) => player.seat === expandedSeat);
+  const heroActionLabel = hero && hero.status !== 'folded' ? betActionLabel(hero.lastAction) : null;
   const canRequestRebuy = Boolean(
     hero
     && hero.stack <= snapshot.config.bigBlind
@@ -35,14 +220,12 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
       || ['waiting', 'sitting_out', 'eliminated'].includes(hero.status)
     ),
   );
-  const canSettlementReady = Boolean(
-    snapshot.phase === 'settlement'
-    && hero
-    && !hero.settlementReady
-    && !hero.managed
-    && !hero.leavePending
-    && hero.status !== 'folded',
-  );
+  const settlementRailStyle = settlementRail === null
+    ? undefined
+    : {
+        '--settlement-rail-top': `${settlementRail.top}px`,
+        '--settlement-rail-width': `${settlementRail.width}px`,
+      } as CSSProperties;
 
   useEffect(() => {
     if (expandedSeat !== null && !opponents.some((player) => player.seat === expandedSeat)) setExpandedSeat(null);
@@ -57,7 +240,11 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
   }, []);
 
   return (
-    <section className="table-stage" data-testid="poker-table" aria-label="德州扑克牌桌">
+    <section
+      className={`table-stage ${compactViewport && expandedOpponent ? 'has-seat-inspector' : ''}`}
+      data-testid="poker-table"
+      aria-label="德州扑克牌桌"
+    >
       <div className="table-utility-bar">
         <div className="hand-identity">
           <span>{snapshot.handId ? `HAND ${snapshot.handId.slice(-6).toUpperCase()}` : 'WAITING'}</span>
@@ -96,20 +283,27 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
         )}
       </div>
 
-        <div className="poker-table-surface">
+        <div
+          className="poker-table-surface"
+          data-player-count={occupiedSeats.length}
+          data-table-density={tableDensity}
+          ref={surfaceRef}
+        >
         <div className="table-rail" aria-hidden="true" />
         <div className="table-felt" aria-hidden="true" />
 
-        {opponents.map((player) => (
+        {positionedOpponents.map(({ player, position }) => (
           <PlayerSeat
             key={player.memberId}
             player={player}
-            position={tablePositionForSeat(player.seat, snapshot.config.maxPlayers, heroSeat)}
+            position={position}
+            playerCount={occupiedSeats.length}
             isHero={false}
             isActing={player.seat === snapshot.actingSeat}
             isButton={player.seat === snapshot.buttonSeat}
             showCards={snapshot.phase === 'playing' || snapshot.phase === 'settlement'}
             expanded={expandedSeat === player.seat}
+            showDetails={!compactViewport}
             onToggleDetails={() => setExpandedSeat((seat) => seat === player.seat ? null : player.seat)}
           />
         ))}
@@ -196,8 +390,8 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
 
         <AnimatePresence>
           {snapshot.settlement && (
-            <div className="settlement-positioner">
-              <motion.div className="settlement-strip" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
+            <div className="settlement-positioner" style={settlementRailStyle}>
+              <motion.div ref={railRef} className="settlement-strip" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
                 <span>本手结算</span>
                 <div>
                   {snapshot.settlement.winners.map((winner) => (
@@ -206,22 +400,20 @@ export const PokerTable = ({ snapshot, pending, onCommand }: PokerTableProps) =>
                       {winner.handName && <small>{winner.handName}</small>}
                     </strong>
                   ))}
-                  {canSettlementReady && hero && (
-                    <button
-                      className={`settlement-ready-command ${hero.settlementReady ? 'ready' : ''}`}
-                      type="button"
-                      disabled={pending || hero.settlementReady}
-                      onClick={() => void onCommand('set_settlement_ready', { ready: true })}
-                    >
-                      <CheckCircle2 size={17} /> {hero.settlementReady ? '已准备下一手' : '准备下一手'}
-                    </button>
-                  )}
                 </div>
               </motion.div>
             </div>
           )}
         </AnimatePresence>
       </div>
+
+      {compactViewport && expandedOpponent && (
+        <SeatDetails
+          className="seat-details mobile-seat-inspector"
+          player={expandedOpponent.player}
+          isButton={expandedOpponent.player.seat === snapshot.buttonSeat}
+        />
+      )}
 
       <aside className="table-side-rail" aria-label="牌桌信息">
         <LeaderboardPanel snapshot={snapshot} />

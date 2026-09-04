@@ -1148,7 +1148,9 @@ class RoomGame:
             borrowed_total = int(player.get("borrowedTotal", 0))
             hole_cards = None
             if player_adapter is not None and material is not None:
-                reveal = player["id"] == member_id or player_adapter.complete
+                reveal = player["id"] == member_id or (
+                    player_adapter.complete and not player_adapter.folded(player["id"])
+                )
                 if reveal:
                     hole_cards = [
                         card_view(material, index)
@@ -1245,8 +1247,8 @@ class RoomGame:
                             "holeCards": [
                                 card_view(history_material, index)
                                 for index in result["holeIndices"]
-                            ],
-                            "handName": result["handName"],
+                            ] if not result["folded"] else [],
+                            "handName": result["handName"] if not result["folded"] else "未摊牌",
                             "delta": result["delta"],
                             "folded": result["folded"],
                         }
